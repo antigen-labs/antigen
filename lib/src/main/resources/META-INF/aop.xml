@@ -1,9 +1,0 @@
-<aspectj>
-    <weaver>
-        <!-- Include all classes for weaving -->
-        <include within="*" />
-    </weaver>
-    <aspects>
-        <aspect name="metatest.core.interceptor.AspectExecutor" />
-    </aspects>
-</aspectj>
