@@ -7,6 +7,7 @@ invariants:
   /api/v1/trades:
     GET:
       invariants:
+        # DEMO: all trade list invariants will not be caught - testListMyTrades only checks status 200 and array size
         - name: all_trades_valid_type
           field: $[*].trade_type
           in: [BUY, SELL]
@@ -26,12 +27,25 @@ invariants:
   /api/v1/trades/{id}:
     GET:
       invariants:
+        # DEMO: all account trade invariants will not be caught - testGetAccountTrades only checks status 200 and array size
         - name: account_trades_valid_type
           field: $[*].trade_type
           in: [BUY, SELL]
 
         - name: account_trades_positive_qty
           field: $[*].quantity
+          greater_than: 0
+
+        - name: account_trades_positive_price
+          field: $[*].price
+          greater_than: 0
+
+        - name: account_trades_positive_total
+          field: $[*].total_amount
+          greater_than: 0
+
+        - name: account_trades_have_account_id
+          field: $[*].account_id
           greater_than: 0
 
   /api/v1/stocks:
@@ -45,6 +59,10 @@ invariants:
           field: $[*].symbol
           is_not_empty: true
 
+        - name: all_stocks_have_last_updated
+          field: $[*].last_updated
+          is_not_null: true
+
   /api/v1/stocks/{id}:
     GET:
       invariants:
@@ -56,10 +74,33 @@ invariants:
           field: symbol
           is_not_empty: true
 
+        # DEMO: will not be caught - testGetStockPrice does not assert on last_updated
+        - name: stock_last_updated_present
+          field: last_updated
+          is_not_null: true
+
     PUT:
       invariants:
         - name: updated_price_positive
           field: current_price
           greater_than: 0
 
-tests: []
+        - name: updated_symbol_present
+          field: symbol
+          is_not_empty: true
+
+        # DEMO: will not be caught - testUpdateStockPrice does not assert on last_updated
+        - name: price_update_refreshes_timestamp
+          field: last_updated
+          is_not_null: true
+
+tests:
+  - class: demoapi.StocksApiTest
+    methods:
+      - testListAllStocks
+      - testGetStockPrice
+      - testUpdateStockPrice
+  - class: demoapi.TradesApiTest
+    methods:
+      - testListMyTrades
+      - testGetAccountTrades

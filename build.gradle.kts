@@ -74,14 +74,29 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
-    val aspectjAgent = configurations.runtimeClasspath.get()
-        .find { it.name.contains("aspectjweaver") }?.absolutePath
-    val runWithAntigen = System.getProperty("runWithAntigen") == "true"
+    jvmArgs("-Xmx2g", "-Xms512m")
 
-    val jvmArguments = mutableListOf("-Xmx2g", "-Xms512m")
-    if (runWithAntigen && aspectjAgent != null) {
-        jvmArguments.add("-javaagent:${aspectjAgent}")
+    doFirst {
+        val runWithAntigen = System.getProperty("runWithAntigen") == "true"
+        jvmArgs("-DrunWithAntigen=$runWithAntigen")
+
+        if (runWithAntigen) {
+            val agent = configurations.runtimeClasspath.get()
+                .find { it.name.contains("aspectjweaver") }?.absolutePath
+            if (agent != null) {
+                jvmArgs("-javaagent:$agent")
+                jvmArgs("-Daj.weaving.verbose=true")
+                jvmArgs("-Dorg.aspectj.weaver.showWeaveInfo=true")
+                println("[Antigen] Fault simulation enabled — agent: $agent")
+
+                // Verify aop.xml is on the test classpath
+                classpath.files.filter { it.isDirectory }.forEach { dir ->
+                    val aopXml = dir.resolve("META-INF/aop.xml")
+                    if (aopXml.exists()) println("[Antigen] Found aop.xml at: ${aopXml.absolutePath}")
+                }
+            } else {
+                println("[Antigen] WARNING: aspectjweaver not found on classpath")
+            }
+        }
     }
-    jvmArguments.add("-DrunWithAntigen=${System.getProperty("runWithAntigen")}")
-    jvmArgs = jvmArguments
 }

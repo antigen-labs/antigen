@@ -45,7 +45,8 @@
       "Bash(Get-ChildItem -Path \"E:\\\\Projects\\\\METATEST\\\\java\\\\metatest\" -Recurse -Directory)",
       "Bash(Select-Object -ExpandProperty FullName)",
       "PowerShell(head *)",
-      "Bash(.\\\\gradlew.bat compileJava)"
+      "Bash(.\\\\gradlew.bat compileJava)",
+      "Bash(.\\\\gradlew clean *)"
     ],
     "deny": [],
     "ask": []
