@@ -1,0 +1,813 @@
+{
+	"info": {
+		"_postman_id": "f100d35c-fb42-4f9d-ab34-09be14317be5",
+		"name": "Order Management System API (With Auth)",
+		"description": "Complete API collection with JWT Authentication for the Order Execution Engine",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Register User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    console.log('User registered successfully');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"mihai@test.com\",\n  \"username\": \"mihai\",\n  \"password\": \"test123\",\n  \"full_name\": \"Mihai Test\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/register",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"register"
+							]
+						},
+						"description": "Register a new user account"
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('access_token', response.access_token);",
+									"    pm.environment.set('access_token', response.access_token);",
+									"    console.log('Token saved:', response.access_token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"mihai\",\n  \"password\": \"test123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						},
+						"description": "Login with username and password (default admin: admin/admin123). Token is automatically saved."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Current User",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/auth/me",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"me"
+							]
+						},
+						"description": "Get current authenticated user information"
+					},
+					"response": []
+				}
+			],
+			"description": "Authentication endpoints - Register and Login to get JWT token"
+		},
+		{
+			"name": "Stocks (Public)",
+			"item": [
+				{
+					"name": "List All Stocks",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/stocks",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"stocks"
+							]
+						},
+						"description": "Get all available stocks (no auth required)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Stock Price",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/stocks/AAPL",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"stocks",
+								"AAPL"
+							]
+						},
+						"description": "Get current price for a stock (no auth required)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Stock Price",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"current_price\": 160.00\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/stocks/AAPL",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"stocks",
+								"AAPL"
+							]
+						},
+						"description": "Update stock price (no auth required)"
+					},
+					"response": []
+				}
+			],
+			"description": "Stock prices are public - no authentication required"
+		},
+		{
+			"name": "Accounts",
+			"item": [
+				{
+					"name": "Create Account",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('account_id', response.id);",
+									"    pm.environment.set('account_id', response.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"holder_name\": \"John Doe\",\n  \"initial_cash\": 10000.00\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/accounts",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"accounts"
+							]
+						},
+						"description": "Create account (requires authentication)"
+					},
+					"response": []
+				},
+				{
+					"name": "List My Accounts",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"warning": "This is a duplicate header and will be overridden by the Authorization header generated by Postman.",
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjIsInVzZXJuYW1lIjoiam9obmRvZSIsImV4cCI6MTc2MzAyMzMzM30.HhieeWer1GbeU4kVwGeAVr1qP38ciAOMZemHZRJRLc0",
+								"type": "default"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/accounts",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"accounts"
+							]
+						},
+						"description": "Get all accounts for current user"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Account",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/accounts/{{account_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"accounts",
+								"{{account_id}}"
+							]
+						},
+						"description": "Get account details (only if you own it)"
+					},
+					"response": []
+				},
+				{
+					"name": "Deposit Cash",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"amount\": 5000.00\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/accounts/{{account_id}}/deposit",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"accounts",
+								"{{account_id}}",
+								"deposit"
+							]
+						},
+						"description": "Deposit cash (only to your own account)"
+					},
+					"response": []
+				},
+				{
+					"name": "Withdraw Cash",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"amount\": 1000.00\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/accounts/{{account_id}}/withdraw",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"accounts",
+								"{{account_id}}",
+								"withdraw"
+							]
+						},
+						"description": "Withdraw cash (only from your own account)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Account Performance",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/accounts/{{account_id}}/performance",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"accounts",
+								"{{account_id}}",
+								"performance"
+							]
+						},
+						"description": "Get account performance (only your own account)"
+					},
+					"response": []
+				}
+			],
+			"description": "Account management - requires authentication"
+		},
+		{
+			"name": "Orders",
+			"item": [
+				{
+					"name": "Create Buy Order",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"account_id\": {{account_id}},\n  \"symbol\": \"AAPL\",\n  \"order_type\": \"BUY\",\n  \"quantity\": 10\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/orders",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"orders"
+							]
+						},
+						"description": "Create buy order (only for your own accounts)"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Sell Order",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"account_id\": {{account_id}},\n  \"symbol\": \"AAPL\",\n  \"order_type\": \"SELL\",\n  \"quantity\": 5\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/orders",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"orders"
+							]
+						},
+						"description": "Create sell order (only for your own accounts)"
+					},
+					"response": []
+				},
+				{
+					"name": "List My Orders",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/orders",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"orders"
+							]
+						},
+						"description": "List all orders for your accounts"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Order",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/orders/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"orders",
+								"1"
+							]
+						},
+						"description": "Get order details (only if you own the account)"
+					},
+					"response": []
+				}
+			],
+			"description": "Order management - requires authentication"
+		},
+		{
+			"name": "Positions",
+			"item": [
+				{
+					"name": "List My Positions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/positions",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"positions"
+							]
+						},
+						"description": "List all positions for your accounts"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Account Positions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/positions/{{account_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"positions",
+								"{{account_id}}"
+							]
+						},
+						"description": "Get positions for specific account (only if you own it)"
+					},
+					"response": []
+				}
+			],
+			"description": "Position management - requires authentication"
+		},
+		{
+			"name": "Trades",
+			"item": [
+				{
+					"name": "List My Trades",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/trades",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"trades"
+							]
+						},
+						"description": "List all trades for your accounts"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Account Trades",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/trades/{{account_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"trades",
+								"{{account_id}}"
+							]
+						},
+						"description": "Get trades for specific account (only if you own it)"
+					},
+					"response": []
+				}
+			],
+			"description": "Trade history - requires authentication"
+		},
+		{
+			"name": "Complete Workflow",
+			"item": [
+				{
+					"name": "1. Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('access_token', response.access_token);",
+									"    pm.environment.set('access_token', response.access_token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "2. Create Account",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('account_id', response.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"account_number\": \"DEMO001\",\n  \"holder_name\": \"Demo Trader\",\n  \"initial_cash\": 50000.00\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/accounts",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"accounts"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "3. Buy AAPL",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"account_id\": {{account_id}},\n  \"symbol\": \"AAPL\",\n  \"order_type\": \"BUY\",\n  \"quantity\": 50\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/orders",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"orders"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "4. Check Positions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/positions/{{account_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"positions",
+								"{{account_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "5. Update Stock Price",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"current_price\": 165.00\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/stocks/AAPL",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"stocks",
+								"AAPL"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "6. Check Performance",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/accounts/{{account_id}}/performance",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"accounts",
+								"{{account_id}}",
+								"performance"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "7. Sell Partial",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"account_id\": {{account_id}},\n  \"symbol\": \"AAPL\",\n  \"order_type\": \"SELL\",\n  \"quantity\": 25\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/orders",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"orders"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Complete end-to-end trading workflow"
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{access_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000/api/v1",
+			"type": "string"
+		},
+		{
+			"key": "access_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "account_id",
+			"value": "3",
+			"type": "string"
+		}
+	]
+}

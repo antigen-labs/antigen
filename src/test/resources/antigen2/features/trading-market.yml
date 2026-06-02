@@ -1,0 +1,65 @@
+feature: Trading - Market Data
+description: >
+  Business rules for stocks and trade data integrity.
+  Prices must be positive, symbols must be present, trade types must be valid.
+
+invariants:
+  /api/v1/trades:
+    GET:
+      invariants:
+        - name: all_trades_valid_type
+          field: $[*].trade_type
+          in: [BUY, SELL]
+
+        - name: all_trades_positive_qty
+          field: $[*].quantity
+          greater_than: 0
+
+        - name: all_trades_positive_price
+          field: $[*].price
+          greater_than: 0
+
+        - name: all_trades_positive_total
+          field: $[*].total_amount
+          greater_than: 0
+
+  /api/v1/trades/{id}:
+    GET:
+      invariants:
+        - name: account_trades_valid_type
+          field: $[*].trade_type
+          in: [BUY, SELL]
+
+        - name: account_trades_positive_qty
+          field: $[*].quantity
+          greater_than: 0
+
+  /api/v1/stocks:
+    GET:
+      invariants:
+        - name: all_stocks_positive_price
+          field: $[*].current_price
+          greater_than: 0
+
+        - name: all_stocks_have_symbol
+          field: $[*].symbol
+          is_not_empty: true
+
+  /api/v1/stocks/{id}:
+    GET:
+      invariants:
+        - name: stock_positive_price
+          field: current_price
+          greater_than: 0
+
+        - name: stock_symbol_present
+          field: symbol
+          is_not_empty: true
+
+    PUT:
+      invariants:
+        - name: updated_price_positive
+          field: current_price
+          greater_than: 0
+
+tests: []
