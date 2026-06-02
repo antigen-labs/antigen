@@ -1,7 +1,7 @@
 feature: Trading - Authentication
 description: >
   Business rules for authentication endpoints.
-  Login must return a valid bearer token; registration must produce an active user.
+  Login must return a valid bearer token; /me must return an active user with consistent timestamps.
 
 invariants:
   /api/v1/auth/login:
@@ -11,34 +11,34 @@ invariants:
           field: access_token
           is_not_empty: true
 
+        # DEMO: will not be caught - testLogin only asserts on access_token, not token_type
         - name: token_type_bearer
           field: token_type
           equals: bearer
 
-  /api/v1/auth/register:
-    POST:
-      invariants:
-        - name: new_user_active
-          field: is_active
-          equals: true
-
-        - name: user_email_present
-          field: email
-          is_not_empty: true
-
-        - name: user_username_present
-          field: username
-          is_not_empty: true
-
   /api/v1/auth/me:
     GET:
       invariants:
+        - name: username_present
+          field: username
+          is_not_empty: true
+
+        - name: email_present
+          field: email
+          is_not_empty: true
+
+        # DEMO: will not be caught - testGetCurrentUser does not assert on is_active
         - name: current_user_active
           field: is_active
           equals: true
 
+        # DEMO: will not be caught - testGetCurrentUser does not assert on timestamps
         - name: user_updated_after_created
           field: created_at
           less_than_or_equal: $.updated_at
 
-tests: []
+tests:
+  - class: io.antigen.core.demoapi.AuthApiTest
+    methods:
+      - testLogin
+      - testGetCurrentUser

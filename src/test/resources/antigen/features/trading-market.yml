@@ -95,12 +95,12 @@ invariants:
           is_not_null: true
 
 tests:
-  - class: demoapi.StocksApiTest
+  - class: io.antigen.core.demoapi.StocksApiTest
     methods:
       - testListAllStocks
       - testGetStockPrice
       - testUpdateStockPrice
-  - class: demoapi.TradesApiTest
+  - class: io.antigen.core.demoapi.TradesApiTest
     methods:
       - testListMyTrades
       - testGetAccountTrades

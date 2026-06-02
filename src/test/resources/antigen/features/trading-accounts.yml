@@ -4,6 +4,52 @@ description: >
   and deposit/withdrawal operations.
 
 invariants:
+  /api/v1/accounts:
+    GET:
+      invariants:
+        # DEMO: all list invariants will not be caught - testListMyAccounts only checks status 200 and array size
+        - name: listed_accounts_valid_status
+          field: $[*].status
+          in: [ACTIVE, SUSPENDED, CLOSED]
+
+        - name: listed_accounts_non_negative_cash
+          field: $[*].cash_balance
+          greater_than_or_equal: 0
+
+        - name: listed_accounts_have_account_number
+          field: $[*].account_number
+          is_not_empty: true
+
+        - name: listed_accounts_have_holder_name
+          field: $[*].holder_name
+          is_not_empty: true
+
+    POST:
+      invariants:
+        - name: new_account_active
+          field: status
+          equals: ACTIVE
+
+        - name: new_account_has_account_number
+          field: account_number
+          is_not_empty: true
+
+        - name: new_account_has_holder_name
+          field: holder_name
+          is_not_empty: true
+
+        - name: new_account_non_negative_cash
+          field: cash_balance
+          greater_than_or_equal: 0
+
+        - name: new_account_non_negative_total_value
+          field: total_value
+          greater_than_or_equal: 0
+
+        - name: new_account_updated_after_created
+          field: created_at
+          less_than_or_equal: $.updated_at
+
   /api/v1/accounts/{id}:
     GET:
       invariants:
@@ -34,6 +80,7 @@ invariants:
   /api/v1/accounts/{id}/performance:
     GET:
       invariants:
+        # DEMO: all performance invariants will not be caught - testGetAccountPerformance is @Disabled
         - name: non_negative_positions_count
           field: positions_count
           greater_than_or_equal: 0
@@ -73,6 +120,15 @@ invariants:
           field: cash_balance
           greater_than: 0
 
+        - name: deposit_account_still_active
+          field: status
+          equals: ACTIVE
+
+        # DEMO: will not be caught - testDepositCash does not assert on timestamps
+        - name: deposit_updated_after_created
+          field: created_at
+          less_than_or_equal: $.updated_at
+
   /api/v1/accounts/{id}/withdraw:
     POST:
       invariants:
@@ -80,9 +136,14 @@ invariants:
           field: cash_balance
           greater_than_or_equal: 0
 
+        - name: withdraw_account_still_active
+          field: status
+          equals: ACTIVE
+
   /api/v1/positions:
     GET:
       invariants:
+        # DEMO: all position list invariants will not be caught - testListMyPositions only checks status 200 and array size
         - name: all_positions_positive_qty
           field: $[*].quantity
           greater_than: 0
@@ -95,10 +156,27 @@ invariants:
           field: $[*].symbol
           is_not_empty: true
 
+        - name: all_positions_have_account_id
+          field: $[*].account_id
+          greater_than: 0
+
   /api/v1/positions/{id}:
     GET:
       invariants:
-        - name: all_positions_correct_account
+        # DEMO: all account positions invariants will not be caught - testGetAccountPositions only checks status 200 and array size
+        - name: account_positions_positive_qty
+          field: $[*].quantity
+          greater_than: 0
+
+        - name: account_positions_positive_cost
+          field: $[*].average_cost
+          greater_than: 0
+
+        - name: account_positions_have_symbol
+          field: $[*].symbol
+          is_not_empty: true
+
+        - name: account_positions_correct_account
           field: $[*].account_id
           greater_than: 0
 
@@ -107,4 +185,15 @@ invariants:
           less_than_or_equal: $[*].updated_at
           quantifier: all
 
-tests: []
+tests:
+  - class: io.antigen.core.demoapi.AccountsApiTest
+    methods:
+      - testCreateAccount
+      - testListMyAccounts
+      - testGetAccount
+      - testDepositCash
+      - testWithdrawCash
+  - class: io.antigen.core.demoapi.PositionsApiTest
+    methods:
+      - testListMyPositions
+      - testGetAccountPositions
