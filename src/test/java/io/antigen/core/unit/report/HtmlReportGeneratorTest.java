@@ -1,5 +1,6 @@
-package io.antigen.core.report;
+package io.antigen.core.unit.report;
 
+import io.antigen.core.report.HtmlReportGenerator;
 import org.junit.jupiter.api.Test;
 import java.io.File;
 

@@ -13,7 +13,34 @@ contract:
     enabled: true
   missing_field:
     enabled: true
+  invalid_value:
+    enabled: true
   empty_list:
     enabled: false
   empty_string:
     enabled: false
+
+exclusions:
+  urls:
+    - '*/login*'
+    - '*/auth/*'
+  tests:
+    - '*LoginTest*'
+
+endpoints:
+  /api/v1/orders/{id}:
+    GET:
+      invariants:
+        - name: filled_order_has_filled_at
+          if:
+            field: status
+            equals: FILLED
+          then:
+            field: filled_at
+            is_not_null: true
+        - name: valid_order_type
+          field: order_type
+          in: [BUY, SELL]
+        - name: positive_quantity
+          field: quantity
+          greater_than: 0

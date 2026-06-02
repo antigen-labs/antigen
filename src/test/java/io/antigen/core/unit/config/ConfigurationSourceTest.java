@@ -1,4 +1,4 @@
-package io.antigen.core.config;
+package io.antigen.core.unit.config;
 
 import io.antigen.core.config.ConfigurationSource;
 import io.antigen.core.config.FaultCollection;

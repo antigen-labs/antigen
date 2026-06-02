@@ -52,7 +52,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Run unit tests
-        run: ./gradlew clean test --tests "io.antigen.core.unit.*" --tests "io.antigen.core.config.*" --tests "io.antigen.core.invariant.*" -DrunWithAntigen=false
+        run: ./gradlew clean test --tests "*.unit.*" --info -DrunWithAntigen=false
 
   integration_tests:
     needs: unit_tests

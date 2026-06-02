@@ -1,7 +1,9 @@
-package io.antigen.core.invariant;
+package io.antigen.core.unit.invariant;
 
 import io.antigen.core.config.ConditionConfig;
 import io.antigen.core.config.InvariantConfig;
+import io.antigen.core.invariant.Mutation;
+import io.antigen.core.invariant.ViolationGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
