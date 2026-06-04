@@ -19,11 +19,13 @@ public class AntigenPlugin implements Plugin<Project> {
             task.getMainClass().set("io.antigen.ai.Antigen");
 
             task.doFirst(t -> {
+                var testRuntimeClasspath = project.getConfigurations().findByName("testRuntimeClasspath");
                 var runtimeClasspath = project.getConfigurations().findByName("runtimeClasspath");
-                if (runtimeClasspath == null) {
+                var cp = testRuntimeClasspath != null ? testRuntimeClasspath : runtimeClasspath;
+                if (cp == null) {
                     throw new IllegalStateException("generateTests requires the java plugin to be applied");
                 }
-                task.setClasspath(runtimeClasspath);
+                task.setClasspath(cp);
                 task.setArgs(buildArgs(project, extension));
             });
         });

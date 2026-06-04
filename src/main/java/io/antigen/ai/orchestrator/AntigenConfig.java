@@ -51,9 +51,20 @@ public class AntigenConfig {
 
         if (os.contains("win")) {
             String userHome = System.getProperty("user.home");
-            String cliPath = userHome + "\\AppData\\Roaming\\npm\\node_modules\\@anthropic-ai\\claude-code\\cli.js";
-            if (new java.io.File(cliPath).exists()) {
-                return "node;" + cliPath; // Special format: "node;<path>" means call via node
+            String base = userHome + "\\AppData\\Roaming\\npm\\node_modules\\@anthropic-ai\\claude-code\\";
+
+            // Native exe (current installs)
+            if (new java.io.File(base + "bin\\claude.exe").exists()) {
+                return base + "bin\\claude.exe";
+            }
+            // Legacy Node.js script
+            if (new java.io.File(base + "cli.js").exists()) {
+                return "node;" + base + "cli.js";
+            }
+            // Fallback: claude.cmd on npm global PATH
+            String claudeCmd = userHome + "\\AppData\\Roaming\\npm\\claude.cmd";
+            if (new java.io.File(claudeCmd).exists()) {
+                return claudeCmd;
             }
         }
 

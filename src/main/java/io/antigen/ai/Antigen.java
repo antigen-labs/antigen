@@ -58,13 +58,13 @@ public class Antigen implements Callable<Integer> {
         @Override
         public Integer call() {
             try {
-                Path spec = Paths.get(specPath);
+                Path spec = Paths.get(specPath).toAbsolutePath().normalize();
                 if (!Files.exists(spec)) {
                     System.err.println("Error: API spec file not found: " + specPath);
                     return 1;
                 }
 
-                Path project = Paths.get(projectPath);
+                Path project = Paths.get(projectPath).toAbsolutePath().normalize();
                 if (!Files.exists(project)) {
                     System.err.println("Error: Project directory not found: " + projectPath);
                     return 1;
