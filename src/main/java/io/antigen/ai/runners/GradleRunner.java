@@ -71,7 +71,7 @@ public class GradleRunner {
                 .command(
                         gradleCommand,
                         "test",
-                        "--tests", "generated.*",
+                        "--tests", toTestPattern(context),
                         "-DrunWithAntigen=false",
                         "--console=plain",
                         "--no-daemon"
@@ -104,13 +104,16 @@ public class GradleRunner {
 
         String gradleCommand = getGradleCommand(context.getProjectPath());
 
+        String reportPath = context.getProjectPath().resolve("fault_simulation_report.json").toString();
+
         ProcessExecutor.ProcessCommand command = ProcessExecutor.ProcessCommand.builder()
                 .command(
                         gradleCommand,
                         "test",
-                        "--tests", "generated.*",
+                        "--tests", toTestPattern(context),
                         "-DrunWithAntigen=true",
                         "-Dio.antigen.core.config.source=local",
+                        "-Dantigen.report.path=" + reportPath,
                         "--console=plain",
                         "--no-daemon"
                 )
@@ -213,6 +216,16 @@ public class GradleRunner {
         report.setFaultDetectionRate(faultDetectionRate);
 
         return report;
+    }
+
+    private String toTestPattern(GenerationContext context) {
+        Path relative = context.getProjectPath().relativize(context.getOutputDir());
+        String pkg = relative.toString().replace('\\', '/');
+        String javaRoot = "src/test/java/";
+        if (pkg.startsWith(javaRoot)) {
+            pkg = pkg.substring(javaRoot.length());
+        }
+        return pkg.replace('/', '.') + ".*";
     }
 
     private String getGradleCommand(Path projectPath) {

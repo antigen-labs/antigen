@@ -25,7 +25,7 @@ public class PromptBuilder {
             API SPECIFICATION: {SPEC_PATH}
             Read this file first using the Read tool. Do not assume its contents.
 
-            Output: src/test/java/generated/
+            Output: {OUTPUT_DIR}
             - Valid Java source files only — no markdown, no code blocks, no explanations
             - Each file must compile standalone: correct package declaration and all imports
             - Organise by resource into separate test classes
@@ -42,15 +42,14 @@ public class PromptBuilder {
     private static final String USER_PROMPT_FILE = "src/test/resources/antigen/generation/prompt.txt";
 
     public String buildPrompt(GenerationContext context) throws IOException {
-        Path specPath = context.getSpecPath();
         Path projectPath = context.getProjectPath();
-
-        String specRelative = projectPath.relativize(specPath).toString().replace('\\', '/');
-
+        String specRelative = projectPath.relativize(context.getSpecPath()).toString().replace('\\', '/');
+        String outputRelative = projectPath.relativize(context.getOutputDir()).toString().replace('\\', '/');
         String userPrompt = loadUserPrompt(projectPath);
 
         String prompt = SYSTEM_PROMPT
                 .replace("{SPEC_PATH}", specRelative)
+                .replace("{OUTPUT_DIR}", outputRelative)
                 .replace("{USER_PROMPT}", userPrompt.isBlank() ? "" : "\n" + userPrompt)
                 .replace("{FEEDBACK}", "");
 
@@ -64,19 +63,19 @@ public class PromptBuilder {
             throw new IllegalStateException("Cannot build retry prompt without feedback");
         }
 
+        Path projectPath = context.getProjectPath();
+        String specRelative = projectPath.relativize(context.getSpecPath()).toString().replace('\\', '/');
+        String outputRelative = projectPath.relativize(context.getOutputDir()).toString().replace('\\', '/');
+        String userPrompt = loadUserPrompt(projectPath);
+
         String feedback = "\nPREVIOUS ATTEMPT FAILED:\n"
                 + context.getLatestFeedback().getFeedback()
                 + "\n\nFix only these specific issues. "
-                + "Review existing files in src/test/java/generated/ and correct them.\n";
-
-        Path specPath = context.getSpecPath();
-        Path projectPath = context.getProjectPath();
-        String specRelative = projectPath.relativize(specPath).toString().replace('\\', '/');
-
-        String userPrompt = loadUserPrompt(projectPath);
+                + "Review existing files in " + outputRelative + "/ and correct them.\n";
 
         return SYSTEM_PROMPT
                 .replace("{SPEC_PATH}", specRelative)
+                .replace("{OUTPUT_DIR}", outputRelative)
                 .replace("{USER_PROMPT}", userPrompt.isBlank() ? "" : "\n" + userPrompt)
                 .replace("{FEEDBACK}", feedback);
     }

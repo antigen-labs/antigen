@@ -7,7 +7,13 @@ import io.antigen.ai.phases.GenerationPhase;
 import io.antigen.ai.phases.AntigenPhase;
 import io.antigen.ai.phases.TestPhase;
 import io.antigen.ai.runners.GradleRunner;
+
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 public class Orchestrator {
@@ -23,10 +29,14 @@ public class Orchestrator {
     }
 
     public GenerationResult generate(Path specPath, Path projectPath, List<String> requirements) {
-        return generate(specPath, projectPath, requirements, null);
+        return generate(specPath, projectPath, projectPath.resolve("src/test/java/generated"), requirements, null);
     }
 
-    public GenerationResult generate(Path specPath, Path projectPath, List<String> requirements, Path promptTemplatePath) {
+    public GenerationResult generate(Path specPath, Path projectPath, Path outputDir, List<String> requirements) {
+        return generate(specPath, projectPath, outputDir, requirements, null);
+    }
+
+    public GenerationResult generate(Path specPath, Path projectPath, Path outputDir, List<String> requirements, Path promptTemplatePath) {
         if (promptTemplatePath != null) {
             System.out.println("Custom Prompt Template: " + promptTemplatePath);
         }
@@ -36,9 +46,12 @@ public class Orchestrator {
             return GenerationResult.failure(0, "Claude CLI not found. Install Claude Code first.");
         }
 
+        writeRunHeader(projectPath, specPath);
+
         GenerationContext context = GenerationContext.builder()
                 .specPath(specPath)
                 .projectPath(projectPath)
+                .outputDir(outputDir)
                 .promptTemplatePath(promptTemplatePath)
                 .requirements(requirements)
                 .build();
@@ -104,6 +117,23 @@ public class Orchestrator {
         System.out.printf("Failed to generate valid tests after %d attempts%n", config.getMaxRetries());
         return GenerationResult.failure(config.getMaxRetries(),
                 "Maximum retries exceeded. Last error: " + context.getLatestFeedback().getFeedback());
+    }
+
+    private static final DateTimeFormatter RUN_TS = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+    private void writeRunHeader(Path projectPath, Path specPath) {
+        Path logFile = projectPath.resolve("ai_logs.txt");
+        String ts = LocalDateTime.now().format(RUN_TS);
+        String header = "\n" + "#".repeat(80) + "\n"
+                + "# GENERATION RUN  " + ts + "\n"
+                + "# spec: " + specPath + "\n"
+                + "#".repeat(80) + "\n\n";
+        try {
+            Files.writeString(logFile, header,
+                    StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+        } catch (IOException e) {
+            System.err.println("[Antigen] Failed to write ai_logs.txt: " + e.getMessage());
+        }
     }
 
     private boolean shouldRetry(GenerationContext context, int currentAttempt) {

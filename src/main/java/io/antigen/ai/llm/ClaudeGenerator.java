@@ -9,6 +9,9 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -29,7 +32,7 @@ public class ClaudeGenerator {
         log.info("Starting test generation with Claude Code CLI");
 
         try {
-            Path generatedDir = context.getProjectPath().resolve("src/test/java/generated");
+            Path generatedDir = context.getOutputDir();
             if (!Files.exists(generatedDir)) {
                 log.info("Creating test output directory: {}", generatedDir);
                 Files.createDirectories(generatedDir);
@@ -78,6 +81,8 @@ public class ClaudeGenerator {
 
             ProcessExecutor.ProcessResult result = processExecutor.execute(command);
 
+            appendToAiLog(context, prompt, result.getOutput());
+
             if (result.isTimedOut()) {
                 log.error("Claude CLI timed out");
                 return GenerationPhase.failed("Claude CLI timed out after " +
@@ -89,11 +94,11 @@ public class ClaudeGenerator {
                 return GenerationPhase.failed("Claude CLI failed: " + result.getOutput());
             }
 
-            List<Path> generatedFiles = findGeneratedTestFiles(context.getProjectPath());
+            List<Path> generatedFiles = findGeneratedTestFiles(context.getOutputDir());
 
             if (generatedFiles.isEmpty()) {
                 log.warn("No test files were generated");
-                return GenerationPhase.failed("No test files found in src/test/java/generated/. " +
+                return GenerationPhase.failed("No test files found in " + context.getOutputDir() + ". " +
                         "Claude may not have created any files.");
             }
 
@@ -110,13 +115,35 @@ public class ClaudeGenerator {
         }
     }
 
-    private List<Path> findGeneratedTestFiles(Path projectPath) throws IOException {
-        Path generatedDir = projectPath.resolve("src/test/java/generated");
+    private static final DateTimeFormatter LOG_TS = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-        if (!Files.exists(generatedDir)) {
-            log.warn("Generated test directory does not exist: {}", generatedDir);
+    private void appendToAiLog(GenerationContext context, String prompt, String response) {
+        Path logFile = context.getProjectPath().resolve("ai_logs.txt");
+        String separator = "=".repeat(80);
+        String ts = LocalDateTime.now().format(LOG_TS);
+        String entry = separator + "\n"
+                + "TURN  " + ts + "\n"
+                + separator + "\n"
+                + "--- PROMPT ---\n"
+                + prompt.strip() + "\n"
+                + "\n--- RESPONSE ---\n"
+                + (response == null ? "(no output)" : response.strip()) + "\n"
+                + "\n";
+        try {
+            Files.writeString(logFile, entry,
+                    StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+        } catch (IOException e) {
+            log.warn("Failed to write ai_logs.txt: {}", e.getMessage());
+        }
+    }
+
+    private List<Path> findGeneratedTestFiles(Path outputDir) throws IOException {
+        if (!Files.exists(outputDir)) {
+            log.warn("Generated test directory does not exist: {}", outputDir);
             return List.of();
         }
+
+        Path generatedDir = outputDir;
 
         try (Stream<Path> paths = Files.walk(generatedDir)) {
             return paths

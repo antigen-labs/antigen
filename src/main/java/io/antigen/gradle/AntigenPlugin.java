@@ -2,9 +2,11 @@ package io.antigen.gradle;
 
 import io.antigen.ai.config.GenerationConfig;
 import io.antigen.ai.config.GenerationConfigLoader;
+import io.antigen.core.simulation.FaultSimulationReport;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.tasks.JavaExec;
+import org.gradle.api.tasks.testing.Test;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -15,6 +17,35 @@ public class AntigenPlugin implements Plugin<Project> {
     @Override
     public void apply(Project project) {
         AntigenExtension extension = project.getExtensions().create("antigen", AntigenExtension.class);
+
+        // Configure the test task to forward Antigen system properties from the Gradle JVM
+        // to the test JVM. This removes the need for consumers to do this manually.
+        project.getTasks().withType(Test.class).configureEach(testTask -> {
+            testTask.doFirst(t -> {
+                String runWithAntigen = System.getProperty("runWithAntigen");
+                if (runWithAntigen != null) {
+                    testTask.jvmArgs("-DrunWithAntigen=" + runWithAntigen);
+                }
+
+                String reportPath = System.getProperty(FaultSimulationReport.REPORT_PATH_PROPERTY);
+                if (reportPath != null) {
+                    testTask.jvmArgs("-D" + FaultSimulationReport.REPORT_PATH_PROPERTY + "=" + reportPath);
+                }
+
+                if ("true".equals(runWithAntigen)) {
+                    var testRuntimeClasspath = project.getConfigurations().findByName("testRuntimeClasspath");
+                    if (testRuntimeClasspath != null) {
+                        String agent = testRuntimeClasspath.getFiles().stream()
+                                .filter(f -> f.getName().contains("aspectjweaver"))
+                                .map(java.io.File::getAbsolutePath)
+                                .findFirst().orElse(null);
+                        if (agent != null) {
+                            testTask.jvmArgs("-javaagent:" + agent);
+                        }
+                    }
+                }
+            });
+        });
 
         project.getTasks().register("generateTests", JavaExec.class, task -> {
             task.setGroup("antigen");
@@ -68,6 +99,11 @@ public class AntigenPlugin implements Plugin<Project> {
                 args.add(req);
             }
         }
+
+        // output_dir: config.yml > default
+        String outputDir = fileConfig.output_dir != null ? fileConfig.output_dir : "src/test/java/generated";
+        args.add("--output-dir");
+        args.add(outputDir);
 
         // max_retries: extension > config.yml > default (5)
         int maxRetries = extension.getMaxRetries() > 0 ? extension.getMaxRetries()

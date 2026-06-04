@@ -14,7 +14,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class FaultSimulationReport {
     private static final FaultSimulationReport INSTANCE = new FaultSimulationReport();
-    private static final String DEFAULT_REPORT_PATH = "fault_simulation_report.json";
+    public static final String REPORT_PATH_PROPERTY = "antigen.report.path";
+    private static final String DEFAULT_REPORT_NAME = "fault_simulation_report.json";
 
     private final Map<String, EndpointFaultResults> report = new ConcurrentHashMap<>();
     private final ObjectMapper objectMapper;
@@ -253,14 +254,17 @@ public class FaultSimulationReport {
     
     public void createJSONReport() {
         try {
-            File reportFile = new File(DEFAULT_REPORT_PATH);
+            String configuredPath = System.getProperty(REPORT_PATH_PROPERTY);
+            File reportFile = configuredPath != null
+                    ? new File(configuredPath)
+                    : new File(DEFAULT_REPORT_NAME);
             if (reportFile.getParentFile() != null) {
                 reportFile.getParentFile().mkdirs();
             }
             objectMapper.writeValue(reportFile, report);
-            System.out.println("Saving fault simulation report to JSON file: " + reportFile.getAbsolutePath());
+            System.out.println("[Antigen] Saving fault simulation report to: " + reportFile.getAbsolutePath());
         } catch (IOException e) {
-            System.err.println("Failed to save report: " + e.getMessage());
+            System.err.println("[Antigen] Failed to save report: " + e.getMessage());
         }
     }
     

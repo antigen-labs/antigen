@@ -55,6 +55,9 @@ public class Antigen implements Callable<Integer> {
         @Option(names = {"--timeout-antigen"}, description = "Antigen fault simulation timeout in minutes (default: 30)", defaultValue = "30")
         private int antigenTimeoutMinutes;
 
+        @Option(names = {"--output-dir"}, description = "Output directory for generated tests, relative to project (default: src/test/java/generated)", defaultValue = "src/test/java/generated")
+        private String outputDir;
+
         @Override
         public Integer call() {
             try {
@@ -70,6 +73,10 @@ public class Antigen implements Callable<Integer> {
                     return 1;
                 }
 
+                Path output = Paths.get(outputDir).isAbsolute()
+                        ? Paths.get(outputDir).normalize()
+                        : project.resolve(outputDir).normalize();
+
                 if (requirementsFile != null) {
                     requirements.addAll(loadRequirementsFromFile(requirementsFile));
                 }
@@ -83,7 +90,7 @@ public class Antigen implements Callable<Integer> {
                         .build();
 
                 Orchestrator orchestrator = new Orchestrator(config);
-                GenerationResult result = orchestrator.generate(spec, project, requirements);
+                GenerationResult result = orchestrator.generate(spec, project, output, requirements);
 
                 System.out.println();
                 System.out.println("=".repeat(60));
