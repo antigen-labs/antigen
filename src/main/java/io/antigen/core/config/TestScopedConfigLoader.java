@@ -11,8 +11,8 @@ import java.util.Optional;
  * Loads per-test-class .antigen.yml config files from the classpath.
  *
  * Convention:
- *   File: src/test/resources/antigen/<fully.qualified.ClassName>.antigen.yml
- *   Example: src/test/resources/antigen/com.example.orders.OrderApiTest.antigen.yml
+ *   File: src/test/resources/antigen/simulation/<fully.qualified.ClassName>.antigen.yml
+ *   Example: src/test/resources/antigen/simulation/com.example.orders.OrderApiTest.antigen.yml
  *
  * Files are discovered lazily when the test class is first intercepted.
  * Results (including "not found") are cached by TestScopedConfigCache.
@@ -23,7 +23,7 @@ public class TestScopedConfigLoader {
 
     public Optional<TestScopedConfig> load(Class<?> testClass) {
         String[] candidates = {
-            "antigen/" + testClass.getName() + ".antigen.yml"
+            "antigen/simulation/" + testClass.getName() + ".antigen.yml"
         };
 
         for (String resourcePath : candidates) {

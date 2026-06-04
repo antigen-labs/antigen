@@ -27,7 +27,7 @@ import java.util.Set;
  */
 public class FeatureConfigScanner {
 
-    private static final String FEATURES_RELATIVE = "antigen/features";
+    private static final String FEATURES_RELATIVE = "antigen/simulation/features";
     private static final ObjectMapper YAML_MAPPER = new ObjectMapper(new YAMLFactory());
 
     public List<FeatureConfig> scanAll() {
@@ -39,7 +39,7 @@ public class FeatureConfigScanner {
 
         if (!features.isEmpty()) {
             System.out.println("[Antigen] Loaded " + features.size()
-                    + " feature file(s) from antigen/features/");
+                    + " feature file(s) from antigen/simulation/features/");
         }
 
         return features;

@@ -61,7 +61,7 @@ public class LocalConfigurationSource implements ConfigurationSource {
     private SimulatorConfig loadConfig() {
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
 
-        String[] candidates = {"antigen/contract.yml"};
+        String[] candidates = {"antigen/simulation/contract.yml"};
         for (String filename : candidates) {
             try (InputStream is = getClass().getClassLoader().getResourceAsStream(filename)) {
                 if (is == null) continue;
@@ -73,7 +73,7 @@ public class LocalConfigurationSource implements ConfigurationSource {
             }
         }
         throw new RuntimeException("No contract.yml found in classpath. " +
-                "Create src/test/resources/antigen/contract.yml to configure fault injection.");
+                "Create src/test/resources/antigen/simulation/contract.yml to configure fault injection.");
     }
 
     private List<Pattern> compilePatterns(List<String> patterns) {

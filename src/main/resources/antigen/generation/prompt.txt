@@ -1,0 +1,28 @@
+# Antigen generation prompt template
+# Copy this file to src/test/resources/antigen/generation/prompt.txt and customise it.
+# This file is appended to Antigen's system prompt before being sent to Claude.
+# Lines starting with # are ignored.
+
+## Testing stack
+# Specify the libraries Claude should use for this project.
+# Example:
+#   Use JUnit 5 (org.junit.jupiter) for test structure.
+#   Use REST Assured for HTTP calls.
+#   Use AssertJ for assertions.
+
+## Base URL
+# Tell Claude where the API runs during tests.
+# Example:
+#   Set RestAssured.baseURI = "http://localhost:8000/api/v1" in a @BeforeAll method.
+
+## Authentication
+# Describe how tests should authenticate, if required.
+# Example:
+#   Obtain a Bearer token by POSTing {"username":"test","password":"test123"} to /auth/login.
+#   Add it as a header: .header("Authorization", "Bearer " + token)
+
+## Additional requirements
+# Any other constraints or context Claude should know.
+# Example:
+#   - Group tests by resource in separate classes (OrdersTest, UsersTest, etc.)
+#   - Each test should be independent — create any required data in the test itself
