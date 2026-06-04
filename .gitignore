@@ -23,7 +23,7 @@
 Thumbs.db
 
 .notes
-*antigen.properties
+antigen.properties
 gap_*
 schema_coverage*
 fault_simulation*
