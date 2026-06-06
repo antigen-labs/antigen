@@ -58,26 +58,19 @@ public class PromptBuilder {
         return prompt;
     }
 
-    public String buildRetryPrompt(GenerationContext context) throws IOException {
+    public String buildRetryPrompt(GenerationContext context) {
         if (!context.hasFeedback()) {
             throw new IllegalStateException("Cannot build retry prompt without feedback");
         }
 
-        Path projectPath = context.getProjectPath();
-        String specRelative = projectPath.relativize(context.getSpecPath()).toString().replace('\\', '/');
-        String outputRelative = projectPath.relativize(context.getOutputDir()).toString().replace('\\', '/');
-        String userPrompt = loadUserPrompt(projectPath);
+        String outputRelative = context.getProjectPath()
+                .relativize(context.getOutputDir()).toString().replace('\\', '/');
 
-        String feedback = "\nPREVIOUS ATTEMPT FAILED:\n"
-                + context.getLatestFeedback().getFeedback()
-                + "\n\nFix only these specific issues. "
-                + "Review existing files in " + outputRelative + "/ and correct them.\n";
-
-        return SYSTEM_PROMPT
-                .replace("{SPEC_PATH}", specRelative)
-                .replace("{OUTPUT_DIR}", outputRelative)
-                .replace("{USER_PROMPT}", userPrompt.isBlank() ? "" : "\n" + userPrompt)
-                .replace("{FEEDBACK}", feedback);
+        return "The previous test generation attempt failed. Fix the issues below.\n\n"
+                + "Read the existing test files in " + outputRelative + "/, fix the reported issues, "
+                + "and write the corrected files back. Fix only what is reported — do not rewrite tests that are already correct.\n\n"
+                + "ISSUES:\n"
+                + context.getLatestFeedback().getFeedback().strip() + "\n";
     }
 
     private String loadUserPrompt(Path projectPath) {
