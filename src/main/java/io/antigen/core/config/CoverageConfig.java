@@ -21,7 +21,6 @@ public class CoverageConfig {
     @Data
     public static class Coverage {
         private boolean enabled = true;
-        private String output_file = "schema_coverage.json";
         private List<String> urls = new ArrayList<>();
         private List<String> exclude_endpoints = new ArrayList<>();
         private boolean include_request_body = true;
@@ -34,7 +33,6 @@ public class CoverageConfig {
     public static class GapAnalysis {
         private boolean enabled = false;
         private String openapi_spec_path;
-        private String output_file = "gap_analysis.json";
     }
 
     private List<Pattern> excludePatterns;
@@ -118,7 +116,7 @@ public class CoverageConfig {
     }
 
     public String getOutputFile() {
-        return coverage != null ? coverage.output_file : "schema_coverage.json";
+        return io.antigen.core.simulation.FaultSimulationReport.OUTPUT_DIR + "/schema_coverage.json";
     }
 
     public boolean shouldIncludeRequestBody() {
@@ -142,6 +140,6 @@ public class CoverageConfig {
     }
 
     public String getGapAnalysisOutputFile() {
-        return coverage != null && coverage.gap_analysis != null ? coverage.gap_analysis.output_file : "gap_analysis.json";
+        return io.antigen.core.simulation.FaultSimulationReport.OUTPUT_DIR + "/gap_analysis.json";
     }
 }

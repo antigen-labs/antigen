@@ -18,9 +18,10 @@ public class HtmlReportGenerator {
     public static void generateReport(String outputPath) {
         try {
             // Read JSON reports
-            JsonNode faultSimulation = readJsonFile("fault_simulation_report.json");
-            JsonNode gapAnalysis = readJsonFile("gap_analysis.json");
-            JsonNode schemaCoverage = readJsonFile("schema_coverage.json");
+            String dir = io.antigen.core.simulation.FaultSimulationReport.OUTPUT_DIR + "/";
+            JsonNode faultSimulation = readJsonFile(dir + "fault_simulation_report.json");
+            JsonNode gapAnalysis = readJsonFile(dir + "gap_analysis.json");
+            JsonNode schemaCoverage = readJsonFile(dir + "schema_coverage.json");
 
             // Generate HTML
             String html = buildHtmlReport(faultSimulation, gapAnalysis, schemaCoverage);

@@ -35,28 +35,15 @@ public class AntigenPhase implements PhaseResult {
         return String.format("""
             ANTIGEN FAILURE - Your tests did NOT catch %d out of %d injected faults (%.1f%% detection rate).
 
-            IMPORTANT: Use the Read tool to read fault_simulation_report.json in the project root.
+            IMPORTANT: Use the Read tool to read build/antigen/fault_simulation_report.json.
             DO NOT write scripts to parse it - read it directly with the Read tool.
 
             The report structure:
             {
               "/api/endpoint": {
-                "contractFaultCount": 5,
-                "invariantFaultCount": 2,
-                "contractFaultsCaught": 3,
-                "invariantFaultsCaught": 1,
-                "contract_faults": {
-                  "fault_type": {
-                    "field_name": {
-                      "caught_by_any_test": false,  <- KEY FIELD: false means this fault escaped
-                      "tested_by": ["testMethod"],
-                      "caught_by": []
-                    }
-                  }
-                },
                 "invariant_faults": {
                   "invariant_name": {
-                    "caught_by_any_test": false,  <- KEY FIELD: false means this fault escaped
+                    "caught_by_any_test": false,  <- false means this fault escaped
                     "tested_by": ["testMethod"],
                     "caught_by": []
                   }
@@ -65,13 +52,10 @@ public class AntigenPhase implements PhaseResult {
             }
 
             Your task:
-            1. Read fault_simulation_report.json from the project root
-            2. Find all entries where "caught_by_any_test": false (in both contract_faults and invariant_faults)
+            1. Read build/antigen/fault_simulation_report.json
+            2. Find all entries where "caught_by_any_test": false
             3. Look at the "tested_by" array to see which tests ran against this fault
             4. Update those tests to add proper assertions to catch that particular fault
-
-            Focus on the faults where "caught_by_any_test": false - these are the ones that escaped detection.
-            "caught_by_any_test" is set to true when at least one test catches that fault
             """,
             escapedFaults.size(),
             totalFaults,

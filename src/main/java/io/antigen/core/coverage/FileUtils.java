@@ -9,7 +9,9 @@ public class FileUtils {
     public static void saveToJsonFile(String path) {
         ObjectMapper objectMapper = new ObjectMapper();
         try {
-            objectMapper.writeValue(new FileWriter(path), Collector.getData());
+            java.io.File file = new java.io.File(path);
+            if (file.getParentFile() != null) file.getParentFile().mkdirs();
+            objectMapper.writeValue(new FileWriter(file), Collector.getData());
         } catch (IOException e) {
             e.printStackTrace();
         }

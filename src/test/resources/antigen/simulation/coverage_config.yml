@@ -4,9 +4,6 @@ coverage:
   # Enable coverage tracking
   enabled: true
 
-  # Output file path
-  output_file: "schema_coverage.json"
-
   # URLs to track (empty = track all)
   urls:
     # - "http://localhost:8080"
@@ -34,7 +31,5 @@ coverage:
     enabled: true
 
     # Path to OpenAPI specification file (JSON or YAML)
-    openapi_spec_path: "api-specs.yaml"
+    openapi_spec_path: "src/test/resources/antigen/generation/api-specs.yaml"
 
-    # Output file for gap analysis report
-    output_file: "gap_analysis.json"

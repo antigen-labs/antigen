@@ -13,7 +13,8 @@ public class FaultSimulationReport {
 
     private static final FaultSimulationReport INSTANCE = new FaultSimulationReport();
     public static final String REPORT_PATH_PROPERTY = "antigen.report.path";
-    private static final String DEFAULT_REPORT_NAME = "fault_simulation_report.json";
+    public static final String OUTPUT_DIR = "build/antigen";
+    private static final String DEFAULT_REPORT_NAME = OUTPUT_DIR + "/fault_simulation_report.json";
 
     private final Map<String, EndpointFaultResults> report = new ConcurrentHashMap<>();
     private final ObjectMapper objectMapper;

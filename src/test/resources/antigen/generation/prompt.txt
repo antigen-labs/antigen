@@ -1,0 +1,21 @@
+Add automated tests for /api/v1/orders endpoint only. NO OTHER ENDPOINTS.
+
+class:OrdersApiTest
+methods:
+  - testCreateBuyOrder
+  - testCreateSellOrder
+  - testListMyOrders
+
+## Base URL
+"http://localhost:8000/api/v1"
+
+## Authentication
+The API requires a Bearer token. Obtain it by POSTing to /auth/login:
+  {"username": "test", "password": "test123"}
+Extract access_token from the response and pass it as: .header("Authorization", "Bearer " + token)
+Do this in @BeforeAll and store as a static field.
+
+## Additional requirements
+- Each test class is independent: perform its own login and any required data setup in @BeforeAll or the test itself
+- For endpoints that require an existing resource (e.g. GET /orders/{id}), create the resource first in the same test
+- Do not share state between test classes

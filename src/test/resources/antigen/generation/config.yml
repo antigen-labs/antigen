@@ -1,0 +1,9 @@
+spec: src/test/resources/antigen/generation/api-specs.yaml
+output_dir: src/test/java/generated
+
+max_retries: 5
+
+timeouts:
+  build: 5
+  test: 10
+  antigen: 30

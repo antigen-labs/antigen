@@ -104,7 +104,9 @@ public class GradleRunner {
 
         String gradleCommand = getGradleCommand(context.getProjectPath());
 
-        String reportPath = context.getProjectPath().resolve("fault_simulation_report.json").toString();
+        String reportPath = context.getProjectPath()
+                .resolve(io.antigen.core.simulation.FaultSimulationReport.OUTPUT_DIR)
+                .resolve("fault_simulation_report.json").toString();
 
         ProcessExecutor.ProcessCommand command = ProcessExecutor.ProcessCommand.builder()
                 .command(
@@ -156,7 +158,9 @@ public class GradleRunner {
     }
 
     private AntigenReport parseAntigenReport(Path projectPath) throws IOException {
-        Path reportPath = projectPath.resolve("fault_simulation_report.json");
+        Path reportPath = projectPath
+                .resolve(io.antigen.core.simulation.FaultSimulationReport.OUTPUT_DIR)
+                .resolve("fault_simulation_report.json");
 
         if (!Files.exists(reportPath)) {
             throw new IOException("Antigen report not found at: " + reportPath);

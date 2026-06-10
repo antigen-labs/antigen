@@ -112,12 +112,15 @@ public class GapAnalyzer {
 
     private static void saveReport(GapReport report, String outputFile) {
         ObjectMapper objectMapper = new ObjectMapper();
-        try (FileWriter writer = new FileWriter(outputFile)) {
-            objectMapper.writerWithDefaultPrettyPrinter().writeValue(writer, report);
+        try {
+            java.io.File file = new java.io.File(outputFile);
+            if (file.getParentFile() != null) file.getParentFile().mkdirs();
+            try (FileWriter writer = new FileWriter(file)) {
+                objectMapper.writerWithDefaultPrettyPrinter().writeValue(writer, report);
+            }
             System.out.println("[Gap Analysis] Gap report saved to: " + outputFile);
         } catch (IOException e) {
             System.err.println("[Gap Analysis] Failed to save gap report: " + e.getMessage());
-            e.printStackTrace();
         }
     }
 }

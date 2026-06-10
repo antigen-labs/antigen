@@ -7,6 +7,8 @@ import io.antigen.core.report.HtmlReportGenerator;
 import org.junit.platform.launcher.TestExecutionListener;
 import org.junit.platform.launcher.TestPlan;
 
+import java.io.File;
+
 public class GlobalTestExecutionListener implements TestExecutionListener {
 
     private static boolean executed = false;
@@ -22,27 +24,22 @@ public class GlobalTestExecutionListener implements TestExecutionListener {
         if (!executed && runWithAntigen) {
             executed = true;
             System.out.println("[Antigen] All tests completed - Generating reports...");
-//            FaultSimulationReport.getInstance().sendResultsToAPI();
+            new File(FaultSimulationReport.OUTPUT_DIR).mkdirs();
 
-            // Print console summary before writing file reports
             FaultSimulationReport.getInstance().printConsoleSummary();
-
-            // Generate JSON reports first
             FaultSimulationReport.getInstance().createJSONReport();
             Collector.saveCoverageReport();
             GapAnalyzer.generateGapReport();
 
-            // Generate HTML report after all JSON reports are created
+            String htmlPath = FaultSimulationReport.OUTPUT_DIR + "/antigen_report.html";
             try {
-                System.out.println("[Antigen] Generating HTML report...");
-                HtmlReportGenerator.generateReport("antigen_report.html");
-                System.out.println("[Antigen] HTML report generated successfully: antigen_report.html");
+                HtmlReportGenerator.generateReport(htmlPath);
+                System.out.println("[Antigen] HTML report: " + htmlPath);
             } catch (Exception e) {
                 System.err.println("[Antigen] Failed to generate HTML report: " + e.getMessage());
-                e.printStackTrace();
             }
 
-            System.out.println("[Antigen] All reports generated successfully!");
+            System.out.println("[Antigen] Reports written to " + FaultSimulationReport.OUTPUT_DIR);
         } else {
             System.out.println("[Antigen] Skipping report generation (executed=" + executed + ", runWithAntigen=" + runWithAntigen + ")");
         }
