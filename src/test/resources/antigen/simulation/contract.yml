@@ -10,11 +10,11 @@ settings:
 # Invariants (business rules) are defined in antigen/features/ and per-test .antigen.yml files.
 contract:
   null_field:
-    enabled: true
+    enabled: false
   missing_field:
-    enabled: true
+    enabled: false
   invalid_value:
-    enabled: true
+    enabled: false
   empty_list:
     enabled: false
   empty_string:

@@ -13,10 +13,14 @@ import io.antigen.core.interceptor.TestContext;
 import io.antigen.core.interceptor.TestContextManager;
 import io.antigen.core.coverage.Logger;
 
+import java.util.List;
 import java.util.Optional;
+import org.apache.http.HttpVersion;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.message.BasicHttpResponse;
+import org.apache.http.message.BasicStatusLine;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -83,8 +87,6 @@ public class AspectExecutor {
 
     @Around("execution(* org.apache.http.impl.client.CloseableHttpClient.execute(..))")
     public Object interceptApacheHttpClient(ProceedingJoinPoint joinPoint) throws Throwable {
-        // Check if we're inside a @Test method (context exists)
-        // If not (e.g., @BeforeAll, @BeforeEach), just let the request proceed normally
         if (!TestContextManager.hasContext()) {
             return joinPoint.proceed(joinPoint.getArgs());
         }
@@ -95,67 +97,58 @@ public class AspectExecutor {
         HttpRequestBase httpRequest = null;
         if (args.length > 0 && args[0] instanceof HttpRequestBase) {
             httpRequest = (HttpRequestBase) args[0];
-
-            if (context.getOriginalResponse() == null) {
-                Request requestWrapper = HTTPFactory.createRequestFrom(httpRequest);
-                context.setOriginalRequest(requestWrapper);
-                System.out.println("Original request captured: " + requestWrapper.getUrl());
-            }
         }
 
-        // Proceed with the actual HTTP call.
-        Object result = joinPoint.proceed(args);
+        // ── Baseline run ──────────────────────────────────────────────────────
+        // Make the real HTTP call, capture every request/response pair for replay.
+        if (context.getCurrentSimulationIndex() == -1) {
+            Object result = joinPoint.proceed(args);
 
-        // Response Interception
-        if (result instanceof HttpResponse) {
-            HttpResponse httpResponse = (HttpResponse) result;
-
-            // Determine current request index in this test execution
-            // During baseline: use size (list is growing)
-            // During simulation re-runs: use counter (list is already populated)
-            int currentRequestIndex;
-            if (context.getCurrentSimulationIndex() == -1) {
-                // Baseline run: use size as requests are being added
-                currentRequestIndex = context.getCapturedRequests().size();
-            } else {
-                // Simulation re-run: use counter that tracks position
-                currentRequestIndex = context.getAndIncrementRequestCounter();
-            }
-
-            // If it's the baseline run (no simulation), capture ALL requests
-            if (context.getCurrentSimulationIndex() == -1) {
+            if (result instanceof HttpResponse httpResponse) {
                 Response responseWrapper = HTTPFactory.createResponseFrom(httpResponse);
                 httpResponse.setEntity(new StringEntity(responseWrapper.getBody()));
 
-                // Capture FIRST request as originalResponse (for backward compatibility)
                 if (context.getOriginalResponse() == null) {
+                    context.setOriginalRequest(httpRequest != null ? HTTPFactory.createRequestFrom(httpRequest) : null);
                     context.setOriginalResponse(responseWrapper);
-                    System.out.println("Original response captured.");
                 }
 
-                // Add to captured requests list for comprehensive simulation
                 if (httpRequest != null) {
                     Request requestWrapper = HTTPFactory.createRequestFrom(httpRequest);
                     context.addCapturedRequest(requestWrapper, responseWrapper);
-                    System.out.println("Captured request #" + currentRequestIndex + ": " + requestWrapper.getUrl());
-
-                    // Log to coverage
+                    System.out.printf("Captured request #%d: %s%n",
+                            context.getCapturedRequests().size() - 1, requestWrapper.getUrl());
                     Logger.parseResponse(httpRequest, context.getTestName(), responseWrapper);
                 }
-
-            } else if (context.getSimulatedResponse() != null && currentRequestIndex == context.getCurrentSimulationIndex()) {
-                // During simulation run, inject mutated response for the target request
-                String simulatedBody = context.getSimulatedResponse().getBody();
-                httpResponse.setEntity(new StringEntity(simulatedBody));
-                System.out.printf("    [RESPONSE-INJECTION] Injecting simulated response for request #%d: %s%n", currentRequestIndex, simulatedBody);
-            } else {
-                // For other requests during simulation, use original response
-                Response responseWrapper = HTTPFactory.createResponseFrom(httpResponse);
-                httpResponse.setEntity(new StringEntity(responseWrapper.getBody()));
             }
+
+            return result;
         }
 
-        return result;
+        // ── Simulation re-run ─────────────────────────────────────────────────
+        // No real HTTP call. Serve the cached baseline response for every request,
+        // swapping in the mutated body only for the target request index.
+        // This prevents server-side state mutations and eliminates network round-trips.
+        int requestIndex = context.getAndIncrementRequestCounter();
+        List<TestContext.RequestResponsePair> captured = context.getCapturedRequests();
+
+        Response cached = requestIndex < captured.size()
+                ? captured.get(requestIndex).getResponse()
+                : null;
+
+        String body;
+        if (context.getSimulatedResponse() != null && requestIndex == context.getCurrentSimulationIndex()) {
+            body = context.getSimulatedResponse().getBody();
+            System.out.printf("    [RESPONSE-INJECTION] request #%d: %s%n", requestIndex, body);
+        } else {
+            body = cached != null ? cached.getBody() : "{}";
+        }
+
+        int statusCode = cached != null ? cached.getStatusCode() : 200;
+        BasicHttpResponse synthetic = new BasicHttpResponse(
+                new BasicStatusLine(HttpVersion.HTTP_1_1, statusCode, "OK"));
+        synthetic.setEntity(new StringEntity(body));
+        return synthetic;
     }
 
 
