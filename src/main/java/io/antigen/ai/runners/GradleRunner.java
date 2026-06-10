@@ -175,31 +175,14 @@ public class GradleRunner {
             String endpoint = endpointEntry.getKey();
             EndpointReport endpointReport = endpointEntry.getValue();
 
-            totalFaults += endpointReport.getContractFaultCount() + endpointReport.getInvariantFaultCount();
-            caughtFaults += endpointReport.getContractFaultsCaught() + endpointReport.getInvariantFaultsCaught();
-
-            // Escaped contract faults: contract_faults -> faultType -> fieldName
-            for (java.util.Map.Entry<String, java.util.Map<String, FaultFieldResult>> faultTypeEntry
-                    : endpointReport.getContractFaults().entrySet()) {
-                String faultType = faultTypeEntry.getKey();
-                for (java.util.Map.Entry<String, FaultFieldResult> fieldEntry
-                        : faultTypeEntry.getValue().entrySet()) {
-                    String fieldName = fieldEntry.getKey();
-                    FaultFieldResult result = fieldEntry.getValue();
-                    if (!result.isCaughtByAnyTest()) {
-                        escapedFaults.add(new EscapedFault(
-                                endpoint, fieldName, faultType,
-                                String.join(", ", result.getTestedBy())));
-                    }
-                }
-            }
-
-            // Escaped invariant faults: invariant_faults -> invariantName
             for (java.util.Map.Entry<String, FaultFieldResult> invariantEntry
                     : endpointReport.getInvariantFaults().entrySet()) {
                 String invariantName = invariantEntry.getKey();
                 FaultFieldResult result = invariantEntry.getValue();
-                if (!result.isCaughtByAnyTest()) {
+                totalFaults++;
+                if (result.isCaughtByAnyTest()) {
+                    caughtFaults++;
+                } else {
                     escapedFaults.add(new EscapedFault(
                             endpoint, invariantName, "invariant",
                             String.join(", ", result.getTestedBy())));
@@ -250,24 +233,10 @@ public class GradleRunner {
     @Data
     @com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)
     public static class EndpointReport {
-        @com.fasterxml.jackson.annotation.JsonProperty("contractFaultCount")
-        private int contractFaultCount;
-        @com.fasterxml.jackson.annotation.JsonProperty("invariantFaultCount")
-        private int invariantFaultCount;
-        @com.fasterxml.jackson.annotation.JsonProperty("contractFaultsCaught")
-        private int contractFaultsCaught;
-        @com.fasterxml.jackson.annotation.JsonProperty("invariantFaultsCaught")
-        private int invariantFaultsCaught;
-        @com.fasterxml.jackson.annotation.JsonProperty("contract_faults")
-        private java.util.Map<String, java.util.Map<String, FaultFieldResult>> contractFaults;
         @com.fasterxml.jackson.annotation.JsonProperty("invariant_faults")
         private java.util.Map<String, FaultFieldResult> invariantFaults;
 
         public EndpointReport() {}
-
-        public java.util.Map<String, java.util.Map<String, FaultFieldResult>> getContractFaults() {
-            return contractFaults != null ? contractFaults : java.util.Map.of();
-        }
 
         public java.util.Map<String, FaultFieldResult> getInvariantFaults() {
             return invariantFaults != null ? invariantFaults : java.util.Map.of();

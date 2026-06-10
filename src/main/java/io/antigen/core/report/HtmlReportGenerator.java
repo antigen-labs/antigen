@@ -68,8 +68,6 @@ public class HtmlReportGenerator {
         html.append("  <div class=\"tabs\">\n");
         html.append("    <button class=\"tab-button active\" onclick=\"showTab('fault-simulation')\">Fault Simulation</button>\n");
         html.append("    <button class=\"tab-button\" onclick=\"showTab('gap-analysis')\">Execution Coverage</button>\n");
-        html.append("    <button class=\"tab-button\" onclick=\"showTab('test-matrix')\">Test Matrix</button>\n");
-//        html.append("    <button class=\"tab-button\" onclick=\"showTab('schema-coverage')\">Schema Coverage</button>\n");
         html.append("  </div>\n");
 
         // Tab Content
@@ -80,14 +78,6 @@ public class HtmlReportGenerator {
         html.append("  <div id=\"gap-analysis\" class=\"tab-content\">\n");
         html.append(buildGapAnalysisSection(gapAnalysis));
         html.append("  </div>\n");
-
-        html.append("  <div id=\"test-matrix\" class=\"tab-content\">\n");
-        html.append(buildTestMatrixSection(faultSimulation));
-        html.append("  </div>\n");
-
-//        html.append("  <div id=\"schema-coverage\" class=\"tab-content\">\n");
-//        html.append(buildSchemaCoverageSection(schemaCoverage));
-//        html.append("  </div>\n");
 
         // JavaScript
         html.append("  <script>\n");
@@ -116,150 +106,74 @@ public class HtmlReportGenerator {
     }
 
     private static String buildSummaryCards(JsonNode faultSimulation, JsonNode gapAnalysis, JsonNode schemaCoverage) {
-        // Calculate metrics
         int totalEndpoints = faultSimulation != null ? faultSimulation.size() : 0;
-        int[] faultStats = calculateFaultStats(faultSimulation);
-        // [total, detected, escaped, invariantTotal, invariantDetected, invariantEscaped]
-        int totalFaults = faultStats[0];
-        int detectedFaults = faultStats[1];
-        int escapedFaults = faultStats[2];
-        int invariantTotal = faultStats[3];
-        int invariantDetected = faultStats[4];
-        int invariantEscaped = faultStats[5];
-
-        // Combined stats for overall detection rate
-        int allTotal = totalFaults + invariantTotal;
-        int allDetected = detectedFaults + invariantDetected;
-        int allEscaped = escapedFaults + invariantEscaped;
-        double detectionRate = allTotal > 0 ? (allDetected * 100.0 / allTotal) : 0;
+        int[] stats = calculateFaultStats(faultSimulation); // [total, detected, escaped]
+        int total = stats[0], detected = stats[1], escaped = stats[2];
+        double detectionRate = total > 0 ? (detected * 100.0 / total) : 0;
 
         int untestedEndpoints = 0;
         double coveragePercentage = 0;
         if (gapAnalysis != null && gapAnalysis.has("summary")) {
             JsonNode summary = gapAnalysis.get("summary");
-            if (summary.has("untested_endpoints")) {
-                untestedEndpoints = summary.get("untested_endpoints").asInt();
-            }
-            if (summary.has("coverage_percentage")) {
-                coveragePercentage = summary.get("coverage_percentage").asDouble();
-            }
+            if (summary.has("untested_endpoints")) untestedEndpoints = summary.get("untested_endpoints").asInt();
+            if (summary.has("coverage_percentage")) coveragePercentage = summary.get("coverage_percentage").asDouble();
         }
 
         StringBuilder cards = new StringBuilder();
         cards.append("  <div class=\"summary-cards\">\n");
 
-        // Card 1: Overall Detection Rate
+        // Card 1: Detection Rate
         String rateClass = detectionRate >= 90 ? "good" : detectionRate >= 70 ? "warning" : "bad";
         cards.append("    <div class=\"card\">\n");
-        cards.append("      <div class=\"card-title\">Overall Detection Rate</div>\n");
+        cards.append("      <div class=\"card-title\">Detection Rate</div>\n");
         cards.append("      <div class=\"card-value " + rateClass + "\">" + String.format("%.1f%%", detectionRate) + "</div>\n");
-        cards.append("      <div class=\"card-subtitle\">" + allDetected + " of " + allTotal + " faults detected</div>\n");
+        cards.append("      <div class=\"card-subtitle\">" + detected + " of " + total + " invariant violations detected</div>\n");
         cards.append("    </div>\n");
 
-        // Card 2: Contract Faults
-        double contractRate = totalFaults > 0 ? (detectedFaults * 100.0 / totalFaults) : 0;
-        String contractClass = contractRate >= 90 ? "good" : contractRate >= 70 ? "warning" : "bad";
+        // Card 2: Escaped violations
+        String escapedClass = escaped == 0 ? "good" : escaped <= 3 ? "warning" : "bad";
         cards.append("    <div class=\"card\">\n");
-        cards.append("      <div class=\"card-title\">Contract Faults</div>\n");
-        cards.append("      <div class=\"card-value " + contractClass + "\">" + String.format("%.0f%%", contractRate) + "</div>\n");
-        cards.append("      <div class=\"card-subtitle\">" + detectedFaults + "/" + totalFaults + " detected (" + escapedFaults + " escaped)</div>\n");
+        cards.append("      <div class=\"card-title\">Escaped Violations</div>\n");
+        cards.append("      <div class=\"card-value " + escapedClass + "\">" + escaped + "</div>\n");
+        cards.append("      <div class=\"card-subtitle\">Invariant violations not caught by any test</div>\n");
         cards.append("    </div>\n");
 
-        // Card 3: Invariant Violations
-        if (invariantTotal > 0) {
-            double invariantRate = (invariantDetected * 100.0 / invariantTotal);
-            String invariantClass = invariantRate >= 90 ? "good" : invariantRate >= 70 ? "warning" : "bad";
-            cards.append("    <div class=\"card\">\n");
-            cards.append("      <div class=\"card-title\">Invariant Violations</div>\n");
-            cards.append("      <div class=\"card-value " + invariantClass + "\">" + String.format("%.0f%%", invariantRate) + "</div>\n");
-            cards.append("      <div class=\"card-subtitle\">" + invariantDetected + "/" + invariantTotal + " detected (" + invariantEscaped + " escaped)</div>\n");
-            cards.append("    </div>\n");
-        } else {
-            // Card 3: Endpoint Coverage (when no invariants)
-            String covClass = coveragePercentage >= 80 ? "good" : coveragePercentage >= 50 ? "warning" : "bad";
-            cards.append("    <div class=\"card\">\n");
-            cards.append("      <div class=\"card-title\">Endpoint Coverage</div>\n");
-            cards.append("      <div class=\"card-value " + covClass + "\">" + String.format("%.1f%%", coveragePercentage) + "</div>\n");
-            cards.append("      <div class=\"card-subtitle\">" + untestedEndpoints + " endpoints untested</div>\n");
-            cards.append("    </div>\n");
-        }
+        // Card 3: Endpoint Coverage
+        String covClass = coveragePercentage >= 80 ? "good" : coveragePercentage >= 50 ? "warning" : "bad";
+        cards.append("    <div class=\"card\">\n");
+        cards.append("      <div class=\"card-title\">Endpoint Coverage</div>\n");
+        cards.append("      <div class=\"card-value " + covClass + "\">" + String.format("%.1f%%", coveragePercentage) + "</div>\n");
+        cards.append("      <div class=\"card-subtitle\">" + untestedEndpoints + " endpoints untested</div>\n");
+        cards.append("    </div>\n");
 
         // Card 4: Tested Endpoints
         cards.append("    <div class=\"card\">\n");
         cards.append("      <div class=\"card-title\">Tested Endpoints</div>\n");
         cards.append("      <div class=\"card-value\">" + totalEndpoints + "</div>\n");
-        cards.append("      <div class=\"card-subtitle\">With fault injection</div>\n");
+        cards.append("      <div class=\"card-subtitle\">With invariant simulation</div>\n");
         cards.append("    </div>\n");
 
         cards.append("  </div>\n");
-
         return cards.toString();
     }
 
     private static int[] calculateFaultStats(JsonNode faultSimulation) {
-        // Returns: [total, detected, escaped, invariantTotal, invariantDetected, invariantEscaped]
-        int total = 0;
-        int detected = 0;
-        int escaped = 0;
-        int invariantTotal = 0;
-        int invariantDetected = 0;
-        int invariantEscaped = 0;
-
-        if (faultSimulation == null || faultSimulation.isNull()) {
-            return new int[]{0, 0, 0, 0, 0, 0};
-        }
+        int total = 0, detected = 0, escaped = 0;
+        if (faultSimulation == null || faultSimulation.isNull()) return new int[]{0, 0, 0};
 
         Iterator<Map.Entry<String, JsonNode>> endpoints = faultSimulation.fields();
         while (endpoints.hasNext()) {
-            Map.Entry<String, JsonNode> endpoint = endpoints.next();
-            JsonNode endpointData = endpoint.getValue();
-
-            // Process contract_faults: faultType -> field -> result
-            if (endpointData.has("contract_faults")) {
-                JsonNode contractFaults = endpointData.get("contract_faults");
-                Iterator<Map.Entry<String, JsonNode>> faultTypeIter = contractFaults.fields();
-                while (faultTypeIter.hasNext()) {
-                    Map.Entry<String, JsonNode> faultTypeEntry = faultTypeIter.next();
-                    JsonNode fields = faultTypeEntry.getValue();
-
-                    Iterator<Map.Entry<String, JsonNode>> fieldIter = fields.fields();
-                    while (fieldIter.hasNext()) {
-                        Map.Entry<String, JsonNode> fieldEntry = fieldIter.next();
-                        JsonNode faultData = fieldEntry.getValue();
-
-                        boolean caughtByAny = faultData.has("caught_by_any_test") &&
-                                            faultData.get("caught_by_any_test").asBoolean();
-                        total++;
-                        if (caughtByAny) {
-                            detected++;
-                        } else {
-                            escaped++;
-                        }
-                    }
-                }
-            }
-
-            // Process invariant_faults: invariantName -> result
-            if (endpointData.has("invariant_faults")) {
-                JsonNode invariantFaults = endpointData.get("invariant_faults");
-                Iterator<Map.Entry<String, JsonNode>> invariantIter = invariantFaults.fields();
-                while (invariantIter.hasNext()) {
-                    Map.Entry<String, JsonNode> invariantEntry = invariantIter.next();
-                    JsonNode faultData = invariantEntry.getValue();
-
-                    boolean caughtByAny = faultData.has("caught_by_any_test") &&
-                                        faultData.get("caught_by_any_test").asBoolean();
-                    invariantTotal++;
-                    if (caughtByAny) {
-                        invariantDetected++;
-                    } else {
-                        invariantEscaped++;
-                    }
-                }
+            JsonNode endpointData = endpoints.next().getValue();
+            if (!endpointData.has("invariant_faults")) continue;
+            Iterator<Map.Entry<String, JsonNode>> it = endpointData.get("invariant_faults").fields();
+            while (it.hasNext()) {
+                JsonNode fd = it.next().getValue();
+                total++;
+                if (fd.has("caught_by_any_test") && fd.get("caught_by_any_test").asBoolean()) detected++;
+                else escaped++;
             }
         }
-
-        return new int[]{total, detected, escaped, invariantTotal, invariantDetected, invariantEscaped};
+        return new int[]{total, detected, escaped};
     }
 
     private static String buildFaultSimulationSection(JsonNode faultSimulation) {
@@ -278,60 +192,26 @@ public class HtmlReportGenerator {
             String endpointPath = endpoint.getKey();
             JsonNode endpointData = endpoint.getValue();
 
-            // Calculate summary for this endpoint
-            int contractFaults = 0, contractDetected = 0, contractEscaped = 0;
-            int invariantFaults = 0, invariantDetected = 0, invariantEscaped = 0;
-
-            // Count contract faults
-            if (endpointData.has("contract_faults")) {
-                JsonNode contractFaultsNode = endpointData.get("contract_faults");
-                Iterator<Map.Entry<String, JsonNode>> faultTypeIter = contractFaultsNode.fields();
-                while (faultTypeIter.hasNext()) {
-                    Map.Entry<String, JsonNode> faultTypeEntry = faultTypeIter.next();
-                    JsonNode fields = faultTypeEntry.getValue();
-
-                    Iterator<Map.Entry<String, JsonNode>> fieldIter = fields.fields();
-                    while (fieldIter.hasNext()) {
-                        Map.Entry<String, JsonNode> fieldEntry = fieldIter.next();
-                        JsonNode faultData = fieldEntry.getValue();
-                        boolean caught = faultData.has("caught_by_any_test") &&
-                                        faultData.get("caught_by_any_test").asBoolean();
-                        contractFaults++;
-                        if (caught) contractDetected++; else contractEscaped++;
-                    }
-                }
-            }
-
-            // Count invariant faults
+            // Count invariant faults for this endpoint
+            int invariantTotal = 0, invariantDetected = 0, invariantEscaped = 0;
             if (endpointData.has("invariant_faults")) {
-                JsonNode invariantFaultsNode = endpointData.get("invariant_faults");
-                Iterator<Map.Entry<String, JsonNode>> invariantIter = invariantFaultsNode.fields();
-                while (invariantIter.hasNext()) {
-                    Map.Entry<String, JsonNode> invariantEntry = invariantIter.next();
-                    JsonNode faultData = invariantEntry.getValue();
-                    boolean caught = faultData.has("caught_by_any_test") &&
-                                    faultData.get("caught_by_any_test").asBoolean();
-                    invariantFaults++;
+                Iterator<Map.Entry<String, JsonNode>> it = endpointData.get("invariant_faults").fields();
+                while (it.hasNext()) {
+                    boolean caught = it.next().getValue().path("caught_by_any_test").asBoolean();
+                    invariantTotal++;
                     if (caught) invariantDetected++; else invariantEscaped++;
                 }
             }
 
-            int totalFaults = contractFaults + invariantFaults;
-            int detectedFaults = contractDetected + invariantDetected;
-            int escapedFaults = contractEscaped + invariantEscaped;
+            if (invariantTotal == 0) { endpointIndex++; continue; }
 
             section.append("    <div class=\"endpoint-card\">\n");
             section.append("      <div class=\"endpoint-header collapsible\" onclick=\"toggleEndpoint(" + endpointIndex + ")\">\n");
             section.append("        <div class=\"endpoint-title-section\">\n");
             section.append("          <span class=\"endpoint-path\">" + escapeHtml(endpointPath) + "</span>\n");
             section.append("          <div class=\"endpoint-summary\">\n");
-            if (invariantFaults > 0) {
-                section.append("            <span class=\"summary-badge detected\">" + contractDetected + "/" + contractFaults + " contract</span>\n");
-                section.append("            <span class=\"summary-badge invariant\">" + invariantDetected + "/" + invariantFaults + " invariant</span>\n");
-            } else {
-                section.append("            <span class=\"summary-badge detected\">" + detectedFaults + " detected</span>\n");
-            }
-            section.append("            <span class=\"summary-badge escaped\">" + escapedFaults + " escaped</span>\n");
+            section.append("            <span class=\"summary-badge invariant\">" + invariantDetected + "/" + invariantTotal + " invariants</span>\n");
+            section.append("            <span class=\"summary-badge escaped\">" + invariantEscaped + " escaped</span>\n");
             section.append("          </div>\n");
             section.append("        </div>\n");
             section.append("        <span class=\"collapse-icon collapsed\">▼</span>\n");
@@ -341,84 +221,10 @@ public class HtmlReportGenerator {
             // Build fault table
             section.append("      <div class=\"fault-table\">\n");
             section.append("        <div class=\"fault-table-header\">\n");
-            section.append("          <div class=\"fault-cell\">Field</div>\n");
-            section.append("          <div class=\"fault-cell\">Fault Type</div>\n");
+            section.append("          <div class=\"fault-cell\">Invariant</div>\n");
             section.append("          <div class=\"fault-cell\">Status</div>\n");
             section.append("          <div class=\"fault-cell\">Details</div>\n");
             section.append("        </div>\n");
-
-            // Render contract faults: faultType -> field -> result
-            if (endpointData.has("contract_faults")) {
-                JsonNode contractFaultsNode = endpointData.get("contract_faults");
-                Iterator<Map.Entry<String, JsonNode>> faultTypeIter = contractFaultsNode.fields();
-                while (faultTypeIter.hasNext()) {
-                    Map.Entry<String, JsonNode> faultTypeEntry = faultTypeIter.next();
-                    String faultType = faultTypeEntry.getKey();
-                    JsonNode fields = faultTypeEntry.getValue();
-
-                    Iterator<Map.Entry<String, JsonNode>> fieldIter = fields.fields();
-                    while (fieldIter.hasNext()) {
-                        Map.Entry<String, JsonNode> fieldEntry = fieldIter.next();
-                        String fieldName = fieldEntry.getKey();
-                        JsonNode faultData = fieldEntry.getValue();
-
-                        boolean caught = faultData.has("caught_by_any_test") &&
-                                        faultData.get("caught_by_any_test").asBoolean();
-
-                        // Get tested_by and caught_by
-                        JsonNode testedBy = faultData.get("tested_by");
-                        JsonNode caughtBy = faultData.get("caught_by");
-                        int testedCount = testedBy != null && testedBy.isArray() ? testedBy.size() : 0;
-                        int caughtCount = caughtBy != null && caughtBy.isArray() ? caughtBy.size() : 0;
-
-                        section.append("        <div class=\"fault-row\">\n");
-                        section.append("          <div class=\"fault-cell\"><code>" + escapeHtml(fieldName) + "</code></div>\n");
-                        section.append("          <div class=\"fault-cell\"><span class=\"fault-badge\">" + escapeHtml(faultType) + "</span></div>\n");
-                        section.append("          <div class=\"fault-cell\">");
-                        section.append("<span class=\"status-badge " + (caught ? "detected" : "escaped") + "\">");
-                        section.append(caught ? "✓ Detected" : "✗ Escaped");
-                        section.append("</span></div>\n");
-                        section.append("          <div class=\"fault-cell\">");
-                        section.append("<button class=\"details-btn\" onclick=\"toggleDetails(this)\">View " + testedCount + " test(s)</button>");
-                        section.append("<div class=\"test-details\" style=\"display:none;\">");
-
-                        // Show all tests that tested this mutation
-                        if (testedBy != null && testedBy.isArray()) {
-                            for (JsonNode testName : testedBy) {
-                                String test = testName.asText();
-                                // Check if this test caught the fault
-                                boolean testCaught = false;
-                                String error = null;
-                                if (caughtBy != null && caughtBy.isArray()) {
-                                    for (JsonNode caughtDetail : caughtBy) {
-                                        if (caughtDetail.has("test") && caughtDetail.get("test").asText().equals(test)) {
-                                            testCaught = true;
-                                            if (caughtDetail.has("error") && !caughtDetail.get("error").isNull()) {
-                                                error = caughtDetail.get("error").asText();
-                                            }
-                                            break;
-                                        }
-                                    }
-                                }
-
-                                section.append("<div class=\"test-detail-item\">");
-                                section.append("<span class=\"test-name\">" + escapeHtml(test) + "</span>");
-                                section.append("<span class=\"status-badge " + (testCaught ? "detected" : "escaped") + "\">");
-                                section.append(testCaught ? "✓" : "✗");
-                                section.append("</span>");
-                                if (error != null) {
-                                    section.append("<div class=\"error-message\">" + escapeHtml(error) + "</div>");
-                                }
-                                section.append("</div>");
-                            }
-                        }
-
-                        section.append("</div>");
-                        section.append("</div>\n");
-                        section.append("        </div>\n");
-                    }
-                }
-            }
 
             // Render invariant faults: invariantName -> result
             if (endpointData.has("invariant_faults")) {
@@ -438,7 +244,6 @@ public class HtmlReportGenerator {
                     int testedCount = testedBy != null && testedBy.isArray() ? testedBy.size() : 0;
 
                     section.append("        <div class=\"fault-row\">\n");
-                    section.append("          <div class=\"fault-cell\"><code>-</code></div>\n");
                     section.append("          <div class=\"fault-cell\"><span class=\"fault-badge invariant-badge\">" + escapeHtml(invariantName) + "</span></div>\n");
                     section.append("          <div class=\"fault-cell\">");
                     section.append("<span class=\"status-badge " + (caught ? "detected" : "escaped") + "\">");
@@ -646,133 +451,6 @@ public class HtmlReportGenerator {
         }
 
         return section.toString();
-    }
-
-    // ── Test Matrix ───────────────────────────────────────────────────────────
-
-    private static String buildTestMatrixSection(JsonNode faultSimulation) {
-        if (faultSimulation == null || faultSimulation.isNull() || faultSimulation.size() == 0) {
-            return "    <div class=\"empty-state\">No fault simulation data available</div>\n";
-        }
-
-        // Collect all unique test names in insertion order
-        Set<String> testNameSet = new LinkedHashSet<>();
-        faultSimulation.elements().forEachRemaining(epData -> {
-            if (epData.has("contract_faults")) {
-                epData.get("contract_faults").elements()
-                        .forEachRemaining(ftNode -> ftNode.elements()
-                                .forEachRemaining(fd -> extractTestNames(fd, testNameSet)));
-            }
-            if (epData.has("invariant_faults")) {
-                epData.get("invariant_faults").elements()
-                        .forEachRemaining(fd -> extractTestNames(fd, testNameSet));
-            }
-        });
-        List<String> testNames = new ArrayList<>(testNameSet);
-        if (testNames.isEmpty()) {
-            return "    <div class=\"empty-state\">No test data available for matrix</div>\n";
-        }
-
-        StringBuilder s = new StringBuilder();
-        s.append("    <div class=\"section-title\">Test \u00d7 Fault Matrix</div>\n");
-        s.append("    <div class=\"section-subtitle\">"
-                + "\u2713 = fault detected by test &nbsp;&nbsp;"
-                + "\u2717 = fault escaped test &nbsp;&nbsp;"
-                + "&ndash; = test did not exercise this endpoint</div>\n");
-        s.append("    <div class=\"matrix-wrapper\">\n");
-        s.append("    <table class=\"matrix-table\">\n");
-        s.append("      <thead><tr>\n");
-        s.append("        <th class=\"matrix-fault-col\">Endpoint / Fault</th>\n");
-        for (String t : testNames) {
-            s.append("        <th class=\"matrix-test-header\">"
-                    + "<span class=\"matrix-test-name\">" + escapeHtml(t) + "</span></th>\n");
-        }
-        s.append("      </tr></thead>\n");
-        s.append("      <tbody>\n");
-
-        Iterator<Map.Entry<String, JsonNode>> endpoints = faultSimulation.fields();
-        while (endpoints.hasNext()) {
-            Map.Entry<String, JsonNode> epEntry = endpoints.next();
-            String epPath = epEntry.getKey();
-            JsonNode epData = epEntry.getValue();
-
-            int faultCount = 0;
-            if (epData.has("contract_faults")) {
-                Iterator<Map.Entry<String, JsonNode>> it = epData.get("contract_faults").fields();
-                while (it.hasNext()) faultCount += it.next().getValue().size();
-            }
-            if (epData.has("invariant_faults")) faultCount += epData.get("invariant_faults").size();
-            if (faultCount == 0) continue;
-
-            s.append("        <tr class=\"matrix-endpoint-row\">\n");
-            s.append("          <td colspan=\"" + (testNames.size() + 1)
-                    + "\" class=\"matrix-endpoint-label\">" + escapeHtml(epPath) + "</td>\n");
-            s.append("        </tr>\n");
-
-            if (epData.has("contract_faults")) {
-                Iterator<Map.Entry<String, JsonNode>> ftIter = epData.get("contract_faults").fields();
-                while (ftIter.hasNext()) {
-                    Map.Entry<String, JsonNode> ftEntry = ftIter.next();
-                    String faultType = ftEntry.getKey();
-                    Iterator<Map.Entry<String, JsonNode>> fieldIter = ftEntry.getValue().fields();
-                    while (fieldIter.hasNext()) {
-                        Map.Entry<String, JsonNode> fe = fieldIter.next();
-                        s.append(renderMatrixRow(faultType, fe.getKey(), false,
-                                fe.getValue(), testNames));
-                    }
-                }
-            }
-
-            if (epData.has("invariant_faults")) {
-                Iterator<Map.Entry<String, JsonNode>> invIter = epData.get("invariant_faults").fields();
-                while (invIter.hasNext()) {
-                    Map.Entry<String, JsonNode> ie = invIter.next();
-                    s.append(renderMatrixRow(null, ie.getKey(), true,
-                            ie.getValue(), testNames));
-                }
-            }
-        }
-
-        s.append("      </tbody>\n");
-        s.append("    </table>\n");
-        s.append("    </div>\n");
-        return s.toString();
-    }
-
-    private static void extractTestNames(JsonNode faultData, Set<String> names) {
-        JsonNode tb = faultData.path("tested_by");
-        if (tb.isArray()) tb.forEach(n -> names.add(n.asText()));
-    }
-
-    private static String renderMatrixRow(String faultType, String label, boolean isInvariant,
-            JsonNode faultData, List<String> testNames) {
-        Set<String> testedSet = new HashSet<>();
-        Set<String> caughtSet = new HashSet<>();
-        JsonNode tb = faultData.path("tested_by");
-        if (tb.isArray()) tb.forEach(n -> testedSet.add(n.asText()));
-        JsonNode cb = faultData.path("caught_by");
-        if (cb.isArray()) cb.forEach(n -> { if (n.has("test")) caughtSet.add(n.get("test").asText()); });
-
-        StringBuilder row = new StringBuilder();
-        row.append("        <tr class=\"matrix-fault-row\">\n");
-        row.append("          <td class=\"matrix-fault-label\">");
-        if (isInvariant) {
-            row.append("<span class=\"fault-badge invariant-badge\">" + escapeHtml(label) + "</span>");
-        } else {
-            row.append("<span class=\"fault-badge\">" + escapeHtml(faultType) + "</span>&nbsp;");
-            row.append("<code>" + escapeHtml(label) + "</code>");
-        }
-        row.append("</td>\n");
-
-        for (String t : testNames) {
-            String css, sym;
-            if      (!testedSet.contains(t)) { css = "not-tested"; sym = "&ndash;"; }
-            else if (caughtSet.contains(t))  { css = "caught";     sym = "\u2713"; }
-            else                              { css = "escaped";    sym = "\u2717"; }
-            row.append("          <td class=\"matrix-cell " + css + "\">" + sym + "</td>\n");
-        }
-        row.append("        </tr>\n");
-        return row.toString();
     }
 
     private static String buildSchemaCoverageSection(JsonNode schemaCoverage) {
@@ -1295,7 +973,7 @@ body {
 
 .fault-table-header {
     display: grid;
-    grid-template-columns: 1.5fr 1.5fr 1fr 1fr;
+    grid-template-columns: 2fr 1fr 1.5fr;
     background: var(--hover-bg);
     font-weight: 600;
     color: var(--text-primary);
@@ -1306,7 +984,7 @@ body {
 
 .fault-row {
     display: grid;
-    grid-template-columns: 1.5fr 1.5fr 1fr 1fr;
+    grid-template-columns: 2fr 1fr 1.5fr;
     background: var(--card-bg);
 }
 
@@ -1669,107 +1347,6 @@ code {
     margin-bottom: 0;
 }
 
-/* ── Test Matrix ──────────────────────────────────────────────────────── */
-
-.matrix-wrapper {
-    overflow-x: auto;
-    border-radius: 12px;
-    border: 1px solid var(--border-color);
-    margin-bottom: 24px;
-}
-
-.matrix-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: var(--card-bg);
-    font-size: 0.875em;
-}
-
-.matrix-fault-col {
-    min-width: 260px;
-    padding: 12px 16px;
-    background: var(--hover-bg);
-    font-weight: 600;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    font-size: 0.8em;
-    border-bottom: 2px solid var(--border-color);
-    border-right: 2px solid var(--border-color);
-    text-align: left;
-}
-
-.matrix-test-header {
-    padding: 8px 6px;
-    background: var(--hover-bg);
-    border-bottom: 2px solid var(--border-color);
-    border-right: 1px solid var(--border-color);
-    min-width: 90px;
-    max-width: 130px;
-    vertical-align: bottom;
-    text-align: center;
-}
-
-.matrix-test-name {
-    display: inline-block;
-    font-family: 'Courier New', monospace;
-    font-size: 0.8em;
-    font-weight: 600;
-    color: var(--text-primary);
-    writing-mode: vertical-lr;
-    transform: rotate(180deg);
-    white-space: nowrap;
-    padding: 4px 2px;
-    max-height: 160px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.matrix-endpoint-row td {
-    padding: 8px 16px;
-    background: var(--hover-bg);
-    font-weight: 700;
-    font-family: 'Courier New', monospace;
-    font-size: 0.9em;
-    color: var(--accent-primary);
-    border-top: 2px solid var(--border-color);
-    border-bottom: 1px solid var(--border-color);
-}
-
-.matrix-fault-label {
-    padding: 10px 16px;
-    border-right: 2px solid var(--border-color);
-    border-bottom: 1px solid var(--border-color);
-}
-
-.matrix-fault-row:last-child .matrix-fault-label,
-.matrix-fault-row:last-child .matrix-cell {
-    border-bottom: none;
-}
-
-.matrix-cell {
-    text-align: center;
-    padding: 10px 6px;
-    font-weight: 700;
-    font-size: 1em;
-    border-right: 1px solid var(--border-color);
-    border-bottom: 1px solid var(--border-color);
-}
-
-.matrix-cell.caught {
-    background: var(--detected-bg);
-    color: var(--detected-text);
-}
-
-.matrix-cell.escaped {
-    background: var(--escaped-bg);
-    color: var(--escaped-text);
-}
-
-.matrix-cell.not-tested {
-    color: var(--text-tertiary);
-    background: var(--bg-primary);
-}
 """;
     }
 

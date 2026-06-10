@@ -7,7 +7,7 @@ import java.util.Map;
 
 /**
  * Per-test-method overrides within a .antigen.yml file.
- * Keys in the parent `tests:` map can be exact method names or glob patterns (e.g. "testGet*").
+ * Keys in the parent `tests:` map can be exact method names or glob patterns.
  *
  * Example:
  * <pre>
@@ -20,11 +20,6 @@ import java.util.Map;
  *             - name: filled_at_set
  *               field: filled_at
  *               is_not_null: true
- *
- *   "testGet*":
- *     contract:
- *       empty_list: { enabled: true }
- *
  *   testHealthCheck:
  *     exclude: true
  * </pre>
@@ -32,27 +27,8 @@ import java.util.Map;
 @Data
 public class TestMethodConfig {
 
-    /**
-     * If true, skip fault simulation entirely for this test method.
-     * The test still runs normally; no mutations are applied.
-     */
     public boolean exclude = false;
-
-    /** Overrides settings for this specific method */
     public SimulatorConfig.Settings settings;
-
-    /**
-     * Method-level contract (fault injection) overrides.
-     * Merged over class-level and global contract settings (most specific wins per fault type).
-     */
-    public TestScopedConfig.ContractOverride contract;
-
-    /**
-     * Method-level endpoint invariants.
-     * Merged additively on top of class-level and global invariants.
-     */
     public Map<String, Map<String, MethodInvariantsConfig>> endpoints = new HashMap<>();
-
-    /** Additional exclusions for this method */
     public TestScopedConfig.ExclusionsOverride exclusions;
 }

@@ -48,7 +48,13 @@
       "Bash(.\\\\gradlew.bat compileJava)",
       "Bash(.\\\\gradlew clean *)",
       "Bash(Remove-Item -Recurse -Force \"C:\\\\Users\\\\M\\\\.gradle\\\\caches\\\\jars-9\\\\0381121055cde8c4f055cc4daa8767af\" -ErrorAction SilentlyContinue)",
-      "Bash(Write-Host \"Deleted cache entry\")"
+      "Bash(Write-Host \"Deleted cache entry\")",
+      "Bash(unzip -l \"/c/Users/M/.gradle/caches/modules-2/files-2.1/com.github.antigen-framework/antigen/v0.1/8c1bf43dfeccf2d42c67bd502f19e643fb10a0f6/antigen-v0.1.jar\")",
+      "Bash(git ls-tree *)",
+      "Bash(where claude *)",
+      "Read(//c/Users/M/**)",
+      "Bash(git tag *)",
+      "Bash(git push *)"
     ],
     "deny": [],
     "ask": []
