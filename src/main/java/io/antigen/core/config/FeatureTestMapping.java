@@ -6,12 +6,13 @@ import lombok.Data;
 import java.util.List;
 
 /**
- * Maps a test class (and optionally specific methods) to a feature.
- * Used inside the `tests:` block of a feature YAML file.
+ * Maps a test class (and optionally specific methods) to an invariant scope.
+ * Used inside an `include_only:` block — either feature-level (restricting all
+ * invariants in the file) or per-invariant (overriding the feature-level scope).
  *
  * Examples:
  * <pre>
- * tests:
+ * include_only:
  *   # All methods in class
  *   - class: com.example.orders.OrderApiTest
  *

@@ -3,6 +3,14 @@ description: >
   Business rules for trading account integrity, position management,
   and deposit/withdrawal operations.
 
+# Feature-level (global) include_only: these invariants apply only to AccountsApiTest
+# and PositionsApiTest. OrdersApiTest also POSTs /accounts (via its createAccount()
+# helper) but is not responsible for account-response correctness, so it is excluded.
+# A per-invariant include_only overrides this default (see new_account_active below).
+include_only:
+  - class: io.antigen.core.demoapi.AccountsApiTest
+  - class: io.antigen.core.demoapi.PositionsApiTest
+
 invariants:
   /api/v1/accounts:
     GET:
@@ -26,9 +34,17 @@ invariants:
 
     POST:
       invariants:
+        # Per-invariant include_only OVERRIDES the feature-level scope above:
+        # this single invariant is checked only against testCreateAccount, even
+        # though the feature default would also include PositionsApiTest and the
+        # other AccountsApiTest methods.
         - name: new_account_active
           field: status
-          equals: XACTIVE
+          equals: ACTIVE
+          include_only:
+            - class: io.antigen.core.demoapi.AccountsApiTest
+              methods:
+                - testCreateAccount
 
         - name: new_account_has_account_number
           field: account_number

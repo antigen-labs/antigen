@@ -17,6 +17,8 @@ import java.util.List;
 import java.util.Optional;
 import org.apache.http.HttpVersion;
 import org.apache.http.HttpResponse;
+import org.apache.http.StatusLine;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicHttpResponse;
@@ -145,10 +147,42 @@ public class AspectExecutor {
         }
 
         int statusCode = cached != null ? cached.getStatusCode() : 200;
-        BasicHttpResponse synthetic = new BasicHttpResponse(
+        // Must return a CloseableHttpResponse — CloseableHttpClient.execute(..) is
+        // declared to return that type, and callers (e.g. RestAssured) cast to it.
+        // A plain BasicHttpResponse triggers a ClassCastException that surfaces as a
+        // false "caught" for every simulated fault.
+        CloseableBasicHttpResponse synthetic = new CloseableBasicHttpResponse(
                 new BasicStatusLine(HttpVersion.HTTP_1_1, statusCode, "OK"));
         synthetic.setEntity(new StringEntity(body));
+        // Carry the original Content-Type forward, otherwise RestAssured has no parser
+        // and fails to read the body — another false "caught" for every fault.
+        synthetic.setHeader("Content-Type", contentTypeOf(cached));
         return synthetic;
+    }
+
+    /** Resolves the Content-Type of the cached response, defaulting to JSON. */
+    private static String contentTypeOf(Response cached) {
+        if (cached != null && cached.getHeaders() != null) {
+            for (var entry : cached.getHeaders().entrySet()) {
+                if ("content-type".equalsIgnoreCase(entry.getKey()) && entry.getValue() != null) {
+                    return entry.getValue().toString();
+                }
+            }
+        }
+        return "application/json";
+    }
+
+    /** Synthetic response served during the simulation re-run (no real network call). */
+    private static final class CloseableBasicHttpResponse extends BasicHttpResponse
+            implements CloseableHttpResponse {
+        CloseableBasicHttpResponse(StatusLine statusline) {
+            super(statusline);
+        }
+
+        @Override
+        public void close() {
+            // No underlying connection to release — body is an in-memory StringEntity.
+        }
     }
 
 

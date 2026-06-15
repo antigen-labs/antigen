@@ -3,6 +3,12 @@ description: >
   Business rules for order creation and lifecycle state transitions.
   Covers status integrity, quantity/price constraints, and temporal ordering.
 
+# Feature-level (global) include_only: every invariant in this file applies only
+# to OrdersApiTest. Other tests that happen to hit /orders are not measured here.
+# A per-invariant include_only overrides this default.
+include_only:
+  - class: io.antigen.core.demoapi.OrdersApiTest
+
 invariants:
   /api/v1/orders:
     GET:
@@ -66,6 +72,28 @@ invariants:
         - name: order_has_valid_account_id
           field: account_id
           greater_than: 0
+
+        # DEMO: complex cross-field temporal invariant - will not be caught.
+        # Both create-order tests assert created_at and filled_at are present,
+        # but never that creation precedes the fill.
+        - name: filled_order_created_before_filled
+          if:
+            field: status
+            equals: FILLED
+          then:
+            field: created_at
+            less_than_or_equal: $.filled_at
+
+        # DEMO: complex conditional invariant - will not be caught.
+        # The create-order tests assert total_amount is present, but never that
+        # a FILLED order reports a strictly positive total.
+        - name: filled_order_positive_total
+          if:
+            field: status
+            equals: FILLED
+          then:
+            field: total_amount
+            greater_than: 0
 
   /api/v1/orders/{id}:
     GET:
