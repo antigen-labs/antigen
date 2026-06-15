@@ -26,7 +26,7 @@ public class ConfigResolver {
             Optional<TestScopedConfig> classConfig,
             String methodName) {
 
-        List<FeatureConfig> features = FeatureConfigCache.getInstance().getFeaturesFor(testClass, methodName);
+        List<FeatureConfig> features = FeatureConfigCache.getInstance().getAllFeatures();
 
         TestScopedConfig scopedConfig = classConfig.orElse(null);
         TestMethodConfig methodConfig = scopedConfig != null ? findMethodConfig(scopedConfig, methodName) : null;
@@ -37,7 +37,8 @@ public class ConfigResolver {
 
         boolean stopOnFirstCatch = resolveStopOnFirstCatch(scopedConfig, methodConfig);
         String defaultQuantifier = resolveDefaultQuantifier(scopedConfig, methodConfig);
-        Map<String, List<InvariantConfig>> mergedInvariants = mergeInvariants(features, scopedConfig, methodConfig);
+        Map<String, List<InvariantConfig>> mergedInvariants =
+                mergeInvariants(features, testClass.getName(), methodName, scopedConfig, methodConfig);
         List<Pattern> excludedPatterns = mergeExcludedEndpointPatterns(scopedConfig, methodConfig);
 
         return new ResolvedTestConfig(false, stopOnFirstCatch, defaultQuantifier, mergedInvariants, excludedPatterns);
@@ -103,15 +104,15 @@ public class ConfigResolver {
 
     private static Map<String, List<InvariantConfig>> mergeInvariants(
             List<FeatureConfig> features,
+            String className,
+            String methodName,
             TestScopedConfig classConfig,
             TestMethodConfig methodConfig) {
 
         Map<String, List<InvariantConfig>> result = new HashMap<>();
 
         for (FeatureConfig feature : features) {
-            if (feature.getInvariants() != null) {
-                addEndpointInvariants(feature.getInvariants(), result);
-            }
+            addFeatureInvariants(feature, className, methodName, result);
         }
 
         if (classConfig != null && classConfig.endpoints != null) {
@@ -123,6 +124,45 @@ public class ConfigResolver {
         }
 
         return result;
+    }
+
+    /**
+     * Adds a feature's invariants for the given test, applying the include_only
+     * cascade per invariant: invariant-level include_only overrides feature-level;
+     * absent at both levels means the invariant applies to any test (auto). The
+     * downstream simulator further filters by which endpoints the test exercises.
+     */
+    static void addFeatureInvariants(
+            FeatureConfig feature,
+            String className,
+            String methodName,
+            Map<String, List<InvariantConfig>> target) {
+
+        Map<String, Map<String, MethodInvariantsConfig>> source = feature.getInvariants();
+        if (source == null) return;
+
+        for (Map.Entry<String, Map<String, MethodInvariantsConfig>> endpointEntry : source.entrySet()) {
+            String endpointPattern = endpointEntry.getKey();
+            Map<String, MethodInvariantsConfig> methodMap = endpointEntry.getValue();
+            if (methodMap == null) continue;
+
+            for (Map.Entry<String, MethodInvariantsConfig> methodEntry : methodMap.entrySet()) {
+                String httpMethod = methodEntry.getKey().toUpperCase();
+                MethodInvariantsConfig mic = methodEntry.getValue();
+                if (mic == null || mic.getInvariants() == null) continue;
+
+                for (InvariantConfig invariant : mic.getInvariants()) {
+                    List<FeatureTestMapping> effectiveScope = invariant.getIncludeOnly() != null
+                            ? invariant.getIncludeOnly()
+                            : feature.getIncludeOnly();
+
+                    if (!FeatureTestMapping.scopeMatches(effectiveScope, className, methodName)) continue;
+
+                    target.computeIfAbsent(endpointPattern + "::" + httpMethod, k -> new ArrayList<>())
+                            .add(invariant);
+                }
+            }
+        }
     }
 
     static void addEndpointInvariants(

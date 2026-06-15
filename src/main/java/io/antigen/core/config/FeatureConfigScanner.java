@@ -16,18 +16,18 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Scans src/test/resources/antigen/features/ for all *.yml feature files.
+ * Scans src/test/resources/antigen/simulation/invariants/ for all *.yml files.
  *
  * Uses a multi-strategy approach to locate the directory because ClassLoader
  * directory resolution is inconsistent across JVM versions and build tools:
  *
- *   1. ClassLoader.getResource("antigen/features")      — standard, works on most JVMs
- *   2. ClassLoader.getResources("antigen/features")     — multi-classloader variant
- *   3. java.class.path system property scanning          — reliable fallback for Gradle workers
+ *   1. ClassLoader.getResource("antigen/simulation/invariants")   — standard, works on most JVMs
+ *   2. ClassLoader.getResources("antigen/simulation/invariants")  — multi-classloader variant
+ *   3. java.class.path system property scanning                    — reliable fallback for Gradle workers
  */
 public class FeatureConfigScanner {
 
-    private static final String FEATURES_RELATIVE = "antigen/simulation/features";
+    private static final String INVARIANTS_RELATIVE = "antigen/simulation/invariants";
     private static final ObjectMapper YAML_MAPPER = new ObjectMapper(new YAMLFactory());
 
     public List<FeatureConfig> scanAll() {
@@ -39,7 +39,7 @@ public class FeatureConfigScanner {
 
         if (!features.isEmpty()) {
             System.out.println("[Antigen] Loaded " + features.size()
-                    + " feature file(s) from antigen/simulation/features/");
+                    + " invariant file(s) from antigen/simulation/invariants/");
         }
 
         return features;
@@ -65,7 +65,7 @@ public class FeatureConfigScanner {
 
     private void resolveViaGetResource(ClassLoader cl, Set<File> dirs) {
         if (cl == null) return;
-        for (String candidate : new String[]{FEATURES_RELATIVE, FEATURES_RELATIVE + "/"}) {
+        for (String candidate : new String[]{INVARIANTS_RELATIVE, INVARIANTS_RELATIVE + "/"}) {
             URL url = cl.getResource(candidate);
             toFile(url).ifPresent(dirs::add);
         }
@@ -74,7 +74,7 @@ public class FeatureConfigScanner {
     private void resolveViaGetResources(ClassLoader cl, Set<File> dirs) {
         if (cl == null) return;
         try {
-            Enumeration<URL> urls = cl.getResources(FEATURES_RELATIVE);
+            Enumeration<URL> urls = cl.getResources(INVARIANTS_RELATIVE);
             while (urls.hasMoreElements()) {
                 toFile(urls.nextElement()).ifPresent(dirs::add);
             }
@@ -88,7 +88,7 @@ public class FeatureConfigScanner {
         for (String entry : classpath.split(java.io.File.pathSeparator)) {
             File root = new File(entry.trim());
             if (!root.isDirectory()) continue;
-            File candidate = new File(root, FEATURES_RELATIVE.replace("/", File.separator));
+            File candidate = new File(root, INVARIANTS_RELATIVE.replace("/", File.separator));
             if (candidate.isDirectory()) {
                 dirs.add(candidate);
             }
@@ -116,16 +116,16 @@ public class FeatureConfigScanner {
         for (File file : files) {
             try (InputStream is = new FileInputStream(file)) {
                 FeatureConfig config = YAML_MAPPER.readValue(is, FeatureConfig.class);
-                if (config.getFeature() == null || config.getFeature().isBlank()) {
-                    System.err.println("[Antigen] Skipping feature file (missing 'feature:' field): "
+                if (config.getName() == null || config.getName().isBlank()) {
+                    System.err.println("[Antigen] Skipping invariant file (missing 'name:' field): "
                             + file.getName());
                     continue;
                 }
                 features.add(config);
-                System.out.println("[Antigen] Loaded feature: '" + config.getFeature()
+                System.out.println("[Antigen] Loaded invariants: '" + config.getName()
                         + "' (" + file.getName() + ")");
             } catch (IOException e) {
-                System.err.println("[Antigen] Failed to parse feature file '"
+                System.err.println("[Antigen] Failed to parse invariant file '"
                         + file.getName() + "': " + e.getMessage());
             }
         }

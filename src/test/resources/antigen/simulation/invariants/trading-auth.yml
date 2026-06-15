@@ -1,4 +1,4 @@
-feature: Trading - Authentication
+name: Trading - Authentication
 description: >
   Business rules for authentication endpoints.
   Login must return a valid bearer token; /me must return an active user with consistent timestamps.
@@ -11,10 +11,16 @@ invariants:
           field: access_token
           is_not_empty: true
 
-        # DEMO: will not be caught - testLogin only asserts on access_token, not token_type
+        # DEMO: will not be caught - testLogin only asserts on access_token, not token_type.
+        # include_only scopes this invariant to testLogin specifically, overriding the
+        # default (any test that calls POST /auth/login).
         - name: token_type_bearer
           field: token_type
           equals: bearer
+          include_only:
+            - class: io.antigen.core.demoapi.AuthApiTest
+              methods:
+                - testLogin
 
   /api/v1/auth/me:
     GET:
@@ -37,8 +43,5 @@ invariants:
           field: created_at
           less_than_or_equal: $.updated_at
 
-tests:
-  - class: io.antigen.core.demoapi.AuthApiTest
-    methods:
-      - testLogin
-      - testGetCurrentUser
+# No feature-level include_only: invariants apply automatically to any test
+# that exercises the matching endpoint (auto-detection).

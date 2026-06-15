@@ -101,7 +101,7 @@ src/test/resources/antigen/
 ├── contract.yml                        # fault types, exclusions, simulation settings
 ├── antigen.properties                  # API key (optional, for cloud config)
 ├── coverage_config.yml                 # coverage tracking (optional)
-└── features/                           # invariants, one file per domain
+└── simulation/invariants/              # invariants, one file per domain
     ├── orders.yml
     ├── accounts.yml
     └── auth.yml
@@ -142,14 +142,14 @@ simulation:
     - message
 ```
 
-#### Feature files
+#### Invariant files
 
-Feature files define invariants (business rules) grouped by domain. Antigen loads all `.yml` files from `antigen/features/` automatically.
+Invariant files define business rules grouped by domain. Antigen loads all `.yml` files from `antigen/simulation/invariants/` automatically.
 
 ```yaml
-# src/test/resources/antigen/features/orders.yml
+# src/test/resources/antigen/simulation/invariants/orders.yml
 
-feature: Order Lifecycle
+name: Order Lifecycle
 description: >
   Status transitions, price constraints, and temporal ordering.
 
@@ -193,18 +193,21 @@ invariants:
         - name: new_order_valid_status
           field: status
           in: [PENDING, FILLED, REJECTED]
-
-# Which tests exercise these endpoints.
-# Antigen re-runs these during simulation.
-tests:
-  - class: com.example.OrdersApiTest
-    methods:
-      - testCreateBuyOrder
-      - testGetOrder
-      - testListMyOrders
 ```
 
-Feature files are additive — a test class can match multiple features, and all matching invariants are merged.
+By default an invariant applies to **any test that exercises the matching endpoint** — no test mapping required. To narrow the scope, add `include_only` at the file level (applies to all invariants in the file) or on an individual invariant (overrides the file-level scope):
+
+```yaml
+        - name: token_type_bearer
+          field: token_type
+          equals: bearer
+          include_only:                 # only measured against these tests
+            - class: com.example.AuthApiTest
+              methods:
+                - testLogin
+```
+
+Invariant files are additive — invariants from every file that matches an endpoint are merged.
 
 #### antigen.properties
 
@@ -517,9 +520,9 @@ contract:
     enabled: true
 ```
 
-**`src/test/resources/antigen/features/my-api.yml`:**
+**`src/test/resources/antigen/simulation/invariants/my-api.yml`:**
 ```yaml
-feature: My API
+name: My API
 
 invariants:
   /api/users/{id}:
@@ -532,11 +535,6 @@ invariants:
         - name: valid_status
           field: status
           in: [ACTIVE, SUSPENDED, PENDING]
-
-tests:
-  - class: com.example.UserApiTest
-    methods:
-      - testGetUser
 ```
 
 ---
@@ -591,7 +589,7 @@ src/main/java/io/antigen/
 │   ├── config/            Configuration loading and merging
 │   │   ├── LocalConfigurationSource    reads antigen/contract.yml
 │   │   ├── ApiConfigurationSource      fetches from cloud API
-│   │   ├── FeatureConfigScanner        loads antigen/features/*.yml
+│   │   ├── FeatureConfigScanner        loads antigen/simulation/invariants/*.yml
 │   │   ├── ConfigResolver              merges global + feature + per-class + per-method
 │   │   └── TestScopedConfigLoader      loads <ClassName>.antigen.yml
 │   ├── injection/         Fault injection strategies (null, missing, empty)
@@ -646,9 +644,9 @@ Verify `-DrunWithAntigen=true` is passed and the AspectJ agent attached. Look fo
 
 File must be at `src/test/resources/antigen/contract.yml`.
 
-**Feature invariants not appearing in report**
+**Invariants not appearing in report**
 
-Check that `tests[].class` in the feature file matches the fully-qualified class name (`com.example.OrdersApiTest`, not `OrdersApiTest`).
+Confirm the test actually calls the endpoint the invariant is keyed on (matching is by endpoint, automatically). If you used `include_only`, check that `class` is the fully-qualified name (`com.example.OrdersApiTest`, not `OrdersApiTest`).
 
 **`ConnectException` to `localhost:8080` on startup**
 

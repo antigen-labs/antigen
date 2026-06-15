@@ -122,6 +122,14 @@ public class InvariantConfig {
     private String quantifier;
 
     /**
+     * Optional per-invariant scope. When present, restricts THIS invariant to
+     * the listed tests, overriding any feature-level include_only. When absent,
+     * the invariant inherits the feature-level scope (or auto-detection).
+     */
+    @JsonProperty("include_only")
+    private List<FeatureTestMapping> includeOnly;
+
+    /**
      * Check if this invariant has an if/then conditional structure
      */
     public boolean isConditional() {

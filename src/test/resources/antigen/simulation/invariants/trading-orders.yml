@@ -1,4 +1,4 @@
-feature: Trading - Order Lifecycle
+name: Trading - Order Lifecycle
 description: >
   Business rules for order creation and lifecycle state transitions.
   Covers status integrity, quantity/price constraints, and temporal ordering.
@@ -126,10 +126,3 @@ invariants:
           then:
             field: created_at
             less_than_or_equal: $.filled_at
-
-tests:
-  - class: io.antigen.core.demoapi.OrdersApiTest
-    methods:
-      - testCreateBuyOrder
-      - testCreateSellOrder
-      - testListMyOrders

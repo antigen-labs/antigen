@@ -1,4 +1,4 @@
-feature: Trading - Accounts & Positions
+name: Trading - Accounts & Positions
 description: >
   Business rules for trading account integrity, position management,
   and deposit/withdrawal operations.
@@ -28,7 +28,7 @@ invariants:
       invariants:
         - name: new_account_active
           field: status
-          equals: ACTIVE
+          equals: XACTIVE
 
         - name: new_account_has_account_number
           field: account_number
@@ -184,16 +184,3 @@ invariants:
           field: $[*].created_at
           less_than_or_equal: $[*].updated_at
           quantifier: all
-
-tests:
-  - class: io.antigen.core.demoapi.AccountsApiTest
-    methods:
-      - testCreateAccount
-      - testListMyAccounts
-      - testGetAccount
-      - testDepositCash
-      - testWithdrawCash
-  - class: io.antigen.core.demoapi.PositionsApiTest
-    methods:
-      - testListMyPositions
-      - testGetAccountPositions

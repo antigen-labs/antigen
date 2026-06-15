@@ -1,28 +1,27 @@
 package io.antigen.core.config;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Root model for feature-level configuration files.
- * Placed in: src/test/resources/antigen/features/<feature-name>.yml
+ * Root model for an invariant file.
+ * Placed in: src/test/resources/antigen/simulation/invariants/<name>.yml
  *
- * A feature groups related business invariants with the tests that exercise them.
- * Multiple test classes can be mapped to the same feature, and a test class can
- * belong to multiple features.
+ * An invariant file groups related business invariants under a name. Invariants
+ * apply automatically to any test that exercises the matching endpoint, unless
+ * narrowed via include_only.
  *
  * Invariants defined here are merged additively with:
- *   - global contract.yml invariants
  *   - class-level .antigen.yml invariants
  *   - method-level .antigen.yml invariants
  *
  * Example:
  * <pre>
- * feature: Order Lifecycle
+ * name: Order Lifecycle
  * description: Rules governing order state transitions and data consistency
  *
  * invariants:
@@ -36,21 +35,24 @@ import java.util.Map;
  *           field: filled_at
  *           is_not_null: true
  *
- * tests:
+ * # Optional: restrict ALL invariants in this feature to specific tests.
+ * # When omitted, invariants apply automatically to any test that calls
+ * # the matching endpoint (auto-detection). A per-invariant include_only
+ * # overrides this feature-level default.
+ * include_only:
  *   - class: com.example.orders.OrderApiTest
  *     methods:
  *       - testGetFilledOrder
  *       - "testCreate*"
- *   - class: com.example.orders.OrderAdminTest
  * </pre>
  */
 @Data
 public class FeatureConfig {
 
-    /** Display name of the feature (used in reports) */
-    private String feature;
+    /** Display name for this set of invariants (used in reports) */
+    private String name;
 
-    /** Optional human-readable description of what this feature covers */
+    /** Optional human-readable description of what these invariants cover */
     private String description;
 
     /**
@@ -61,16 +63,15 @@ public class FeatureConfig {
     private Map<String, Map<String, MethodInvariantsConfig>> invariants = new HashMap<>();
 
     /**
-     * Test classes and methods that exercise this feature.
-     * These drive which simulations receive this feature's invariants.
+     * Optional feature-level scope. When present, restricts this feature's
+     * invariants to the listed tests. When absent, invariants apply to any
+     * test that exercises the matching endpoint (auto-detection).
+     * Overridable per-invariant via {@link InvariantConfig#getIncludeOnly()}.
      */
-    private List<FeatureTestMapping> tests = new ArrayList<>();
+    @JsonProperty("include_only")
+    private List<FeatureTestMapping> includeOnly;
 
     public boolean hasInvariants() {
         return invariants != null && !invariants.isEmpty();
-    }
-
-    public boolean hasTests() {
-        return tests != null && !tests.isEmpty();
     }
 }

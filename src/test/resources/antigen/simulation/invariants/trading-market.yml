@@ -1,4 +1,4 @@
-feature: Trading - Market Data
+name: Trading - Market Data
 description: >
   Business rules for stocks and trade data integrity.
   Prices must be positive, symbols must be present, trade types must be valid.
@@ -93,14 +93,3 @@ invariants:
         - name: price_update_refreshes_timestamp
           field: last_updated
           is_not_null: true
-
-tests:
-  - class: io.antigen.core.demoapi.StocksApiTest
-    methods:
-      - testListAllStocks
-      - testGetStockPrice
-      - testUpdateStockPrice
-  - class: io.antigen.core.demoapi.TradesApiTest
-    methods:
-      - testListMyTrades
-      - testGetAccountTrades
