@@ -34,6 +34,7 @@ public class StocksApiTest extends ApiTestBase {
                 .body("symbol", notNullValue())
                 .body("current_price", notNullValue())
                 .body("current_price", not(emptyString()))
+                .body("current_price", instanceOf(String.class))
                 .body("last_updated", notNullValue());
     }
 

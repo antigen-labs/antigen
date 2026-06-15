@@ -4,7 +4,7 @@ import io.restassured.http.ContentType;
 import org.junit.jupiter.api.Test;
 
 import static io.restassured.RestAssured.given;
-import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.*;
 
 public class AuthApiTest extends ApiTestBase {
 
@@ -22,7 +22,8 @@ public class AuthApiTest extends ApiTestBase {
                 .post("/auth/login")
                 .then()
                 .statusCode(200)
-                .body("access_token", notNullValue());
+                .body("access_token", notNullValue())
+                .body("access_token", not(emptyString()));
     }
 
     @Test
@@ -34,6 +35,9 @@ public class AuthApiTest extends ApiTestBase {
                 .then()
                 .statusCode(200)
                 .body("username", notNullValue())
-                .body("email", notNullValue());
+                .body("username", not(emptyString()))
+                .body("email", notNullValue())
+                .body("email", not(emptyString()))
+                .body("is_active", equalTo(true));
     }
 }
