@@ -38,6 +38,23 @@ Recurrent traps in Antigen development and their fixes. Format: **Symptom → Ca
 - **Fix:** this is expected, not a bug. These belong in the "uncatchable" bucket when reasoning
   about a target escape rate (~15–20% for the demoapi suite is healthy).
 
+## Nested-field invariants cross-contaminate the report (false catches)
+
+- **Symptom:** invariants on **nested** fields (`subscription.plan`, `metadata.loginCount`,
+  `paymentMethod.card.last4`) show up as *caught* when they shouldn't, and `caught_by[].error`
+  names a **different** invariant's mutation (e.g. `user_username_present` "caught" with
+  `expected <dark> but was <INVALID_VALUE>`, which is the *theme* mutation). Order-dependent;
+  worse with many invariants on one endpoint.
+- **Cause:** `FaultPlanner.mutatedBody` copied the baseline response with a **shallow**
+  `new LinkedHashMap<>(responseMap)`. The top level is fresh but nested maps/lists are shared with
+  the baseline, so `applyMutation` descending into `subscription` → `put("plan", …)` mutates the
+  *shared* nested object — corrupting the baseline and leaking into every later fault run. Top-level
+  mutations (`status`, `quantity`) never exposed it, which is why the trading/demoapi suite (all
+  top-level) looked fine.
+- **Fix:** deep-copy the response before mutating (`FaultPlanner.deepCopy` / `deepCopyValue`,
+  recursive over maps+lists, scalars shared). Keep `LinkedHashMap`/`ArrayList` so field order stays
+  byte-stable for the conformance vectors. Confirmed: conformance unchanged, demoapi held 39/33/6.
+
 ## JitPack doesn't pick up a new tag / example won't resolve
 
 - **Symptom:** the example fails to resolve `com.github.antigen-labs:antigen:vX.Y`.

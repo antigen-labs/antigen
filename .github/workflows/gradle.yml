@@ -51,10 +51,11 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      # Spans both modules since the 2b split, so the global filter is correct here.
       - name: Run unit tests
         run: ./gradlew clean test --tests "*.unit.*" --info -DrunWithAntigen=false
 
-  integration_tests:
+  engine_tests:
     needs: unit_tests
     runs-on: ubuntu-latest
     permissions:
@@ -75,12 +76,122 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      # The *.unit.* filter excludes the engine's conformance golden replay; run the full engine
+      # suite so the protocol regression net (conformance vectors) and the EngineLayerTest purity
+      # guard are gated.
+      - name: Run engine tests (conformance vectors + purity guard)
+        run: ./gradlew :antigen-engine:test
+
+  integration_tests:
+    needs: engine_tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 18
+        uses: actions/setup-java@v4
+        with:
+          java-version: '18'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      # Mappings live under the test-runner module since the 2b split.
       - name: Start WireMock
         run: |
           docker run -d --name wiremock -p 8089:8089 \
-            -v $GITHUB_WORKSPACE/src/test/resources/mappings:/home/wiremock/mappings \
-           wiremock/wiremock:latest --port 8089 --verbose
+            -v $GITHUB_WORKSPACE/antigen-test-runner/src/test/resources/mappings:/home/wiremock/mappings \
+            wiremock/wiremock:latest --port 8089 --verbose
           until curl -sf http://localhost:8089/__admin/health; do sleep 1; done
 
+      # Scope to :antigen-test-runner — a bare `test --tests "...integration.*"` fails on
+      # antigen-engine ("No tests found for given includes") since the 2b split.
       - name: Run integration tests
-        run: ./gradlew clean test --tests "io.antigen.core.integration.*" -DrunWithAntigen=true
+        run: ./gradlew :antigen-test-runner:clean :antigen-test-runner:test --tests "io.antigen.core.integration.*" -DrunWithAntigen=true
+
+      # Gate on the fault report itself: a green test run does not prove fault injection happened.
+      # The mock-users/mock-payments invariants (scoped to the integration tests) must yield a
+      # non-empty report with real catches, at least one (intended) escape, and zero infra-errors.
+      - name: Verify fault report
+        run: |
+          python3 - <<'PY'
+          import json, sys
+          d = json.load(open('antigen-test-runner/build/antigen/fault_simulation_report.json'))
+          tot=c=e=bad=0
+          for ep, data in d.items():
+              for n, f in data.get('invariant_faults', {}).items():
+                  tot += 1
+                  if f.get('caught_by_any_test'):
+                      c += 1
+                      for x in f.get('caught_by', []):
+                          err = x.get('error') or ''
+                          if 'cannot be cast' in err or 'no content-type' in err:
+                              bad += 1; break
+                  else:
+                      e += 1
+          print(f'fault report: total {tot}  caught {c}  escaped {e}  infra-errors {bad}')
+          assert tot > 0,  'empty report — no invariants applied to the integration tests'
+          assert c > 0,    'no faults caught — fault injection/scoring is broken'
+          assert e > 0,    'no faults escaped — the intended escape cases are not being measured'
+          assert bad == 0, 'infrastructure errors present — report is invalid (see gotchas.md)'
+          print('fault report OK')
+          PY
+
+  package_smoke:
+    needs: engine_tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 18
+        uses: actions/setup-java@v4
+        with:
+          java-version: '18'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      # Build the shipped artifact and exercise it as a real subprocess over both transports —
+      # catches packaging-only failures unit tests can't see (lost ServiceLoader registrations,
+      # wrong Main-Class, stdout pollution of the protocol channel).
+      - name: Build fat jar
+        run: ./gradlew :antigen-engine:shadowJar
+
+      - name: Smoke-test EngineServer (stdio + http)
+        run: |
+          set -euo pipefail
+          JAR=$(ls antigen-engine/build/libs/*-all.jar)
+          echo "Artifact: $JAR"
+          REQ='{"method":"session/start","params":{"protocolVersion":"1","adapter":{"name":"ci","version":"0"}}}'
+
+          echo "--- stdio ---"
+          OUT=$(echo "$REQ" | java -jar "$JAR" 2>/dev/null)
+          echo "$OUT"
+          echo "$OUT" | grep -q '"sessionId"' || { echo "stdio smoke FAILED"; exit 1; }
+
+          echo "--- http ---"
+          java -jar "$JAR" http > engine.out 2> engine.err &
+          PID=$!
+          for i in $(seq 1 30); do grep -q ANTIGEN_PORT engine.out && break; sleep 1; done
+          PORT=$(sed -n 's/ANTIGEN_PORT=//p' engine.out)
+          echo "port: $PORT"
+          [ -n "$PORT" ] || { echo "http smoke FAILED: no port banner"; cat engine.err; kill $PID || true; exit 1; }
+          RESP=$(curl -s -X POST "http://127.0.0.1:$PORT/" -H "Content-Type: application/json" -d "$REQ")
+          echo "$RESP"
+          kill $PID 2>/dev/null || true
+          echo "$RESP" | grep -q '"sessionId"' || { echo "http smoke FAILED"; exit 1; }
+          echo "smoke OK"

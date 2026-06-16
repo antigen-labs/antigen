@@ -1,0 +1,43 @@
+name: Mock API - Payments
+description: >
+  Invariants for the integration tier (WireMock, no live backend), scoped to the mockrestapi
+  PaymentTest. Targets POST /api/v1/payments (no path parameter, so it normalizes cleanly —
+  unlike GET /payments/{id}, whose alphanumeric id does not normalize to {id}). Mix of catchable
+  rules and a documented-uncatchable temporal rule.
+
+include_only:
+  - class: io.antigen.core.integration.mockrestapi.PaymentTest
+
+invariants:
+  /api/v1/payments:
+    POST:
+      invariants:
+        # CAUGHT — testCreatePayment asserts status == "pending"
+        - name: payment_valid_status
+          field: status
+          in: [pending, succeeded, failed]
+
+        # CAUGHT — testCreatePayment asserts amount == 2500
+        - name: payment_positive_amount
+          field: amount
+          greater_than: 0
+
+        # CAUGHT — testCreatePayment asserts currency == "usd"
+        - name: payment_valid_currency
+          field: currency
+          in: [usd, eur, gbp]
+
+        # ESCAPED — testCreatePayment only asserts id is notNull; an empty string passes.
+        - name: payment_id_present
+          field: id
+          is_not_empty: true
+
+        # ESCAPED — relational/temporal rule across two fields; RestAssured can't assert a <= b
+        # between response fields, and no test checks it (documented uncatchable category).
+        - name: payment_created_before_updated
+          if:
+            field: status
+            equals: pending
+          then:
+            field: timestamps.createdAt
+            less_than_or_equal: $.timestamps.updatedAt

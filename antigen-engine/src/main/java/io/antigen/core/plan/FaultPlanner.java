@@ -139,10 +139,13 @@ public class FaultPlanner {
     /** Applies a mutation to a copy of the baseline response map and serializes it. */
     private String mutatedBody(Map<String, Object> responseMap, Mutation mutation) {
         try {
-            // LinkedHashMap: preserve the baseline field order so the serialized mutated body is
-            // deterministic (the conformance vectors compare it byte-for-byte). Jackson parses
-            // response bodies into LinkedHashMaps, so this keeps round-trips order-stable.
-            Map<String, Object> mutated = new LinkedHashMap<>(responseMap);
+            // Deep copy, not a shallow `new LinkedHashMap<>(responseMap)`: a shallow copy shares the
+            // nested maps/lists with the baseline, so a nested-field mutation (e.g. "subscription.plan")
+            // would mutate the shared nested object in place — corrupting the baseline and leaking
+            // into every later fault run for that test. Top-level mutations never exposed this; nested
+            // ones do. LinkedHashMap/ArrayList preserve field order so the serialized body stays
+            // deterministic (the conformance vectors compare it byte-for-byte).
+            Map<String, Object> mutated = deepCopy(responseMap);
             applyMutation(mutated, mutation);
             return OBJECT_MAPPER.writeValueAsString(mutated);
         } catch (JsonProcessingException e) {
@@ -150,6 +153,30 @@ public class FaultPlanner {
                     mutation.getInvariantName(), e.getMessage());
             return null;
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> deepCopy(Map<String, Object> map) {
+        return (Map<String, Object>) deepCopyValue(map);
+    }
+
+    /** Recursively copies maps and lists; scalars (String/Number/Boolean/null) are immutable and shared. */
+    private static Object deepCopyValue(Object value) {
+        if (value instanceof Map<?, ?> map) {
+            Map<String, Object> copy = new LinkedHashMap<>();
+            for (Map.Entry<?, ?> entry : map.entrySet()) {
+                copy.put(String.valueOf(entry.getKey()), deepCopyValue(entry.getValue()));
+            }
+            return copy;
+        }
+        if (value instanceof List<?> list) {
+            List<Object> copy = new ArrayList<>(list.size());
+            for (Object item : list) {
+                copy.add(deepCopyValue(item));
+            }
+            return copy;
+        }
+        return value;
     }
 
     @SuppressWarnings("unchecked")

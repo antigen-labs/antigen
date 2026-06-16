@@ -105,8 +105,17 @@ Per-platform binaries come from running `nativeCompile` on each target OS/arch i
 - `:antigen-engine:test` — **green** (GraalVM + shadow plugins both resolved and applied without
   disturbing configuration; `EngineLayerTest` purity, config/protocol tests, 4 conformance vectors).
 - Integration tier (`:antigen-test-runner:test --tests "io.antigen.core.integration.*"
-  -DrunWithAntigen=true`, WireMock :8089) — **green**; LTW weaving intact, fault report shows
-  **0 infrastructure errors**.
+  -DrunWithAntigen=true`, WireMock :8089) — **green**; LTW weaving intact. (Its fault report was
+  empty until the integration tier was made a real fault gate — see note below.)
+
+> **Follow-on (this session): integration tier is now a real fault gate.** The committed invariants
+> were all `include_only`-scoped to the demoapi/e2e classes, so the integration tier planned zero
+> faults — an empty `{ }` report. Added `mock-users.yml` / `mock-payments.yml` scoped to the
+> integration `UsersTest`/`PaymentTest`, giving a deterministic **13 faults — 9 caught / 4 escaped,
+> 0 infra-errors**. Authoring them surfaced a deep-copy bug in `FaultPlanner.mutatedBody` (shallow
+> copy leaked nested-field mutations across fault runs → false catches); fixed with a recursive
+> deep copy (see `docs/knowledge/gotchas.md`). Conformance vectors unchanged; demoapi held 39/33/6.
+> CI now gates on the integration report (non-empty, caught>0, escaped>0, 0 infra-errors).
 - **Not verified here:** `nativeCompile` itself (no GraalVM toolchain on this box). The
   reflect-config seed + metadata wiring are *authored but unproven*; the agent + first real
   `nativeCompile` will confirm/extend them.

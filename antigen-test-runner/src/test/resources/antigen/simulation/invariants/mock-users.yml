@@ -1,0 +1,61 @@
+name: Mock API - Users
+description: >
+  Invariants for the integration tier (WireMock, no live backend), scoped to the mockrestapi
+  UsersTest. Deliberately a mix of catchable and uncatchable rules so the integration fault
+  report is non-empty and exercises real catch/escape scoring in CI:
+    - CAUGHT  : the test asserts the field's value (equals / >0), so a mutation fails it.
+    - ESCAPED : `is_not_empty` mutated to "" still passes a bare notNull assertion (documented
+                gotcha) — the test checks presence, not non-emptiness.
+
+# Scope every invariant in this file to the integration UsersTest only. The same endpoints are
+# also hit by ECommerceApiTest; those hits are intentionally out of scope here so the report is
+# deterministic.
+include_only:
+  - class: io.antigen.core.integration.mockrestapi.UsersTest
+
+invariants:
+  /api/v1/users/{id}:
+    GET:
+      invariants:
+        # CAUGHT — testGetUser asserts id == 1001
+        - name: user_positive_id
+          field: id
+          greater_than: 0
+
+        # CAUGHT — testUserSubscriptionData asserts subscription.plan == "premium"
+        - name: user_subscription_plan_valid
+          field: subscription.plan
+          in: [premium, basic, free]
+
+        # CAUGHT — testUserSubscriptionData asserts subscription.status == "active"
+        - name: user_subscription_status_valid
+          field: subscription.status
+          in: [active, cancelled, expired]
+
+        # CAUGHT — testUserMetadata asserts metadata.loginCount > 0
+        - name: user_positive_login_count
+          field: metadata.loginCount
+          greater_than: 0
+
+        # CAUGHT — testUserPreferencesWithNullValues asserts preferences.theme == "dark"
+        - name: user_valid_theme
+          field: preferences.theme
+          in: [dark, light, auto]
+
+        # ESCAPED — testGetUser only asserts username is notNull; an empty string passes.
+        - name: user_username_present
+          field: username
+          is_not_empty: true
+
+        # ESCAPED — testGetUser only asserts email is notNull; an empty string passes.
+        - name: user_email_present
+          field: email
+          is_not_empty: true
+
+  /api/v1/users:
+    GET:
+      invariants:
+        # CAUGHT — testGetUsers asserts pagination.total > 0
+        - name: users_positive_total
+          field: pagination.total
+          greater_than: 0

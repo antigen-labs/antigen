@@ -42,9 +42,15 @@ starting a new container. Clean up with `docker rm -f wiremock` when done if you
   ("No tests found for given includes"). Always target the module's task.
 - **`./gradlew --stop` before `clean`** (Windows daemon file-lock). Always.
 - If every test fails with a connection refused to :8089, WireMock isn't running — start it.
-- Because `runWithAntigen=true`, the simulation runs after the baseline. If you see a fault
-  report, sanity-check it the same way `test-e2e` does (watch for infrastructure-error
-  "false caught": `cannot be cast` / `no content-type` in `caught_by[].error`).
+- Because `runWithAntigen=true`, the simulation runs after the baseline and produces a real
+  report. The integration invariants (`mock-users.yml`, `mock-payments.yml`, `include_only`-scoped
+  to `UsersTest`/`PaymentTest`) yield a deterministic **13 faults — 9 caught, 4 escaped
+  (~31%), 0 infra-errors**. The 4 escapes are intentional: three `is_not_empty` rules a bare
+  `notNull` assertion can't catch, plus one relational/temporal rule. Sanity-check the report the
+  same way `test-e2e` does (watch for `cannot be cast` / `no content-type` in `caught_by[].error`).
+- Only `UsersTest`/`PaymentTest` are scoped, and only on normalization-safe endpoints
+  (`GET /users/{id}` with a numeric id, `GET /users`, `POST /payments`). `GET /payments/{id}` is
+  avoided: the alphanumeric id (`pay_…`) doesn't normalize to `{id}`, so it wouldn't match.
 
 ## Reporting back
 
