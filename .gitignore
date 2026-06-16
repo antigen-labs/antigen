@@ -1,6 +1,10 @@
-# Ignore build output directories
+# Ignore build output directories (root and every module)
 /build/
+build/
 /out/
+
+# Generated fault-simulation HTML report (build artifact)
+antigen_report.html
 
 # Ignore IntelliJ IDEA project files
 /.idea/

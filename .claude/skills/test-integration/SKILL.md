@@ -31,11 +31,15 @@ starting a new container. Clean up with `docker rm -f wiremock` when done if you
 
 ```bash
 ./gradlew --stop
-./gradlew clean test --tests "io.antigen.core.integration.*" -DrunWithAntigen=true
+./gradlew :antigen-test-runner:clean :antigen-test-runner:test --tests "io.antigen.core.integration.*" -DrunWithAntigen=true
 ```
 
 ## Gotchas
 
+- **Scope to `:antigen-test-runner`.** Since the Phase 2b module split, integration tests live in
+  the `antigen-test-runner` module. A bare `test --tests "io.antigen.core.integration.*"` fails
+  because the `antigen-engine` module has a test source set with no matching tests
+  ("No tests found for given includes"). Always target the module's task.
 - **`./gradlew --stop` before `clean`** (Windows daemon file-lock). Always.
 - If every test fails with a connection refused to :8089, WireMock isn't running — start it.
 - Because `runWithAntigen=true`, the simulation runs after the baseline. If you see a fault
