@@ -13,4 +13,4 @@ git tag "$TAG"
 git push origin "$TAG"
 
 echo "Tag $TAG pushed. JitPack will build it at:"
-echo "https://jitpack.io/#antigen-framework/antigen/$TAG"
+echo "https://jitpack.io/#antigen-labs/antigen/$TAG"
