@@ -1,5 +1,6 @@
 package io.antigen.core.protocol;
 
+import io.antigen.core.config.ConfigDirLoader;
 import io.antigen.core.config.ResolvedTestConfig;
 import io.antigen.core.plan.FaultPlan;
 import io.antigen.core.plan.FaultPlanner;
@@ -50,16 +51,20 @@ public final class EngineSession {
 
     /**
      * Handles {@code session/start} (protocol §4.1): rejects a mismatched protocol version, then
-     * opens a session. Loading config from {@link SessionStartRequest#getConfigDir()} on the
-     * filesystem is Phase 3b; until then a session resolves to the global config (resolver returns
-     * {@code null} → {@link FaultPlanner} uses {@code SimulatorConfig}).
+     * opens a session. When a {@code configDir} is supplied, invariants are loaded from it
+     * (filesystem) and per-test config resolves by {@code testId} via {@link ConfigDirLoader};
+     * otherwise the session falls back to the global config (resolver returns {@code null} →
+     * {@link FaultPlanner} uses {@code SimulatorConfig} defaults).
      */
     public static EngineSession start(SessionStartRequest request) {
         if (!PROTOCOL_VERSION.equals(request.getProtocolVersion())) {
             throw new ProtocolException("unsupported protocolVersion '" + request.getProtocolVersion()
                     + "' (engine speaks '" + PROTOCOL_VERSION + "')");
         }
-        return new EngineSession(UUID.randomUUID().toString(), testId -> null);
+        Function<String, ResolvedTestConfig> configFor = (request.getConfigDir() != null)
+                ? ConfigDirLoader.fromConfigDir(request.getConfigDir())::resolve
+                : testId -> null;
+        return new EngineSession(UUID.randomUUID().toString(), configFor);
     }
 
     public String getSessionId() { return sessionId; }

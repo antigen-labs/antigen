@@ -29,6 +29,23 @@ public class InvariantConfigScanner {
     private static final String INVARIANTS_RELATIVE = "antigen/simulation/invariants";
     private static final ObjectMapper YAML_MAPPER = new ObjectMapper(new YAMLFactory());
 
+    /**
+     * Scans a single invariants directory on the filesystem (the protocol path: the engine is
+     * handed an explicit {@code configDir} rather than discovering one on the classpath). Reuses
+     * the same per-file parsing as classpath scanning.
+     */
+    public List<FeatureConfig> scanDirectory(java.nio.file.Path invariantsDir) {
+        List<FeatureConfig> features = new ArrayList<>();
+        if (invariantsDir != null) {
+            scanDirectory(invariantsDir.toFile(), features);
+        }
+        if (!features.isEmpty()) {
+            System.out.println("[Antigen] Loaded " + features.size()
+                    + " invariant file(s) from " + invariantsDir);
+        }
+        return features;
+    }
+
     public List<FeatureConfig> scanAll() {
         List<FeatureConfig> features = new ArrayList<>();
 

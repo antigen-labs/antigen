@@ -21,12 +21,28 @@ import java.util.regex.Pattern;
  */
 public class ConfigResolver {
 
+    /**
+     * In-process (JVM adapter) entry point: features come from the classpath cache and the test is
+     * identified by its {@link Class}. Delegates to the language-neutral overload.
+     */
     public static ResolvedTestConfig resolve(
             Class<?> testClass,
             Optional<TestScopedConfig> classConfig,
             String methodName) {
+        return resolve(InvariantConfigCache.getInstance().getAllFeatures(),
+                testClass.getName(), classConfig, methodName);
+    }
 
-        List<FeatureConfig> features = InvariantConfigCache.getInstance().getAllFeatures();
+    /**
+     * Language-neutral entry point (protocol path): the caller supplies the loaded features and the
+     * test's fully-qualified class name as plain data — no {@link Class}, no classpath. This is what
+     * lets a foreign adapter's {@code session/start}-loaded config resolve by {@code testId}.
+     */
+    public static ResolvedTestConfig resolve(
+            List<FeatureConfig> features,
+            String className,
+            Optional<TestScopedConfig> classConfig,
+            String methodName) {
 
         TestScopedConfig scopedConfig = classConfig.orElse(null);
         TestMethodConfig methodConfig = scopedConfig != null ? findMethodConfig(scopedConfig, methodName) : null;
@@ -38,7 +54,7 @@ public class ConfigResolver {
         boolean stopOnFirstCatch = resolveStopOnFirstCatch(scopedConfig, methodConfig);
         String defaultQuantifier = resolveDefaultQuantifier(scopedConfig, methodConfig);
         Map<String, List<InvariantConfig>> mergedInvariants =
-                mergeInvariants(features, testClass.getName(), methodName, scopedConfig, methodConfig);
+                mergeInvariants(features, className, methodName, scopedConfig, methodConfig);
         List<Pattern> excludedPatterns = mergeExcludedEndpointPatterns(scopedConfig, methodConfig);
 
         return new ResolvedTestConfig(false, stopOnFirstCatch, defaultQuantifier, mergedInvariants, excludedPatterns);
