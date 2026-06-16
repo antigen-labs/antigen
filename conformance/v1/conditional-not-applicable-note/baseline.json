@@ -1,0 +1,11 @@
+{
+  "sessionId": "conformance",
+  "testId": "OrdersApiTest#getPendingOrder",
+  "captures": [
+    {
+      "index": 0,
+      "request": { "method": "GET", "url": "http://localhost:8000/api/v1/orders", "headers": {}, "body": null },
+      "response": { "status": 200, "headers": { "Content-Type": "application/json" }, "body": "{\"status\":\"PENDING\",\"filled_at\":null}" }
+    }
+  ]
+}

@@ -15,7 +15,7 @@ import io.antigen.core.normalizer.EndpointPatternNormalizer;
 
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -139,7 +139,10 @@ public class FaultPlanner {
     /** Applies a mutation to a copy of the baseline response map and serializes it. */
     private String mutatedBody(Map<String, Object> responseMap, Mutation mutation) {
         try {
-            Map<String, Object> mutated = new HashMap<>(responseMap);
+            // LinkedHashMap: preserve the baseline field order so the serialized mutated body is
+            // deterministic (the conformance vectors compare it byte-for-byte). Jackson parses
+            // response bodies into LinkedHashMaps, so this keeps round-trips order-stable.
+            Map<String, Object> mutated = new LinkedHashMap<>(responseMap);
             applyMutation(mutated, mutation);
             return OBJECT_MAPPER.writeValueAsString(mutated);
         } catch (JsonProcessingException e) {
@@ -159,7 +162,7 @@ public class FaultPlanner {
             if (next instanceof Map) {
                 current = (Map<String, Object>) next;
             } else {
-                Map<String, Object> newMap = new HashMap<>();
+                Map<String, Object> newMap = new LinkedHashMap<>();
                 current.put(parts[i], newMap);
                 current = newMap;
             }

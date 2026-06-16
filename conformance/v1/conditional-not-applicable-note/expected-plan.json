@@ -1,0 +1,20 @@
+{
+  "control" : {
+    "runId" : "control",
+    "kind" : "CONTROL",
+    "endpoint" : null,
+    "invariant" : null,
+    "field" : null,
+    "mutation" : null,
+    "targetIndex" : 0,
+    "responseBody" : "{\"status\":\"PENDING\",\"filled_at\":null}"
+  },
+  "runs" : [ ],
+  "notes" : [ {
+    "endpoint" : "/api/v1/orders",
+    "invariant" : "filled_order_has_timestamp",
+    "reason" : "NOT_APPLICABLE",
+    "message" : "[NOT APPLICABLE] No mutations could be generated (conditional invariant with unmet precondition)"
+  } ],
+  "empty" : false
+}

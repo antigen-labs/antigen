@@ -21,7 +21,11 @@ public class FaultSimulationReport {
     private final Set<String> caughtFaults = ConcurrentHashMap.newKeySet();
     private final Set<String> flakyTests = ConcurrentHashMap.newKeySet();
 
-    private FaultSimulationReport() {
+    /**
+     * The shared accumulator for the in-process Java adapter path (one report per test run).
+     * The protocol path constructs its own per-session instance instead — see {@code EngineSession}.
+     */
+    public FaultSimulationReport() {
         this.objectMapper = new ObjectMapper();
         this.objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
     }
@@ -29,6 +33,25 @@ public class FaultSimulationReport {
     public static FaultSimulationReport getInstance() { return INSTANCE; }
 
     public Map<String, EndpointFaultResults> getReport() { return report; }
+
+    /**
+     * Counts across the whole report: total faults exercised, how many were caught by some test,
+     * and the rest (escaped). Mirrors the figures {@link #printConsoleSummary()} prints and the
+     * {@code session/end} summary returns (protocol §4.4).
+     */
+    public Counts counts() {
+        int total = 0, caught = 0;
+        for (EndpointFaultResults ep : report.values()) {
+            for (FaultSimulationResult r : ep.getInvariantFaults().values()) {
+                total++;
+                if (r.isCaughtByAnyTest()) caught++;
+            }
+        }
+        return new Counts(total, caught, total - caught);
+    }
+
+    /** Immutable tally of a report: {@code faults} total, {@code caught}, {@code escaped}. */
+    public record Counts(int faults, int caught, int escaped) {}
 
     public void recordInvariantResult(String endpoint, String invariantName, TestLevelSimulationResults result) {
         if (endpoint == null || invariantName == null || result == null) {

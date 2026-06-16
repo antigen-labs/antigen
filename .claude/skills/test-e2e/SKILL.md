@@ -7,7 +7,7 @@ description: Run Antigen's end-to-end test tier (io.antigen.core.demoapi.*) agai
 
 The e2e tier (`io.antigen.core.demoapi.*`) runs **with the AspectJ agent** against the **live
 oms-demo-api on `http://localhost:8000/api/v1`**. This tier is **not run in CI** (it needs the
-external server). It produces the real fault report under `build/antigen/`.
+external server). It produces the real fault report under `antigen-test-runner/build/antigen/`.
 
 ## Prerequisite: live oms-demo-api on :8000
 
@@ -30,19 +30,23 @@ curl -s -o /dev/null -w "%{http_code}\n" -X POST http://localhost:8000/api/v1/au
 
 ```bash
 ./gradlew --stop
-./gradlew clean test -i --tests "*demoapi.*" -DrunWithAntigen=true
+./gradlew :antigen-test-runner:clean :antigen-test-runner:test -i --tests "*demoapi.*" -DrunWithAntigen=true
 ```
+
+**Scope to `:antigen-test-runner`** (Phase 2b module split): the demoapi tests live in that
+module, and a bare `clean test --tests "*demoapi.*"` fails on `antigen-engine` with
+"No tests found for given includes". Same trap as `test-integration`.
 
 ## Health-check the report (critical)
 
 A green build does NOT mean the report is valid. Twice the report was meaningless because the
 fault-injection path errored and every fault was recorded as a false "caught". Always inspect
-`build/antigen/fault_simulation_report.json`:
+`antigen-test-runner/build/antigen/fault_simulation_report.json`:
 
 ```bash
 python -c "
 import json
-d=json.load(open('build/antigen/fault_simulation_report.json'))
+d=json.load(open('antigen-test-runner/build/antigen/fault_simulation_report.json'))
 tot=c=e=bad=0; esc=[]
 for ep,data in d.items():
     for n,f in data.get('invariant_faults',{}).items():

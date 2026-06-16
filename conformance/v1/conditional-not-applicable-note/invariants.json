@@ -1,0 +1,9 @@
+{
+  "/api/v1/orders::GET": [
+    {
+      "name": "filled_order_has_timestamp",
+      "if":   { "field": "status", "equals": "FILLED" },
+      "then": { "field": "filled_at", "is_not_null": true }
+    }
+  ]
+}

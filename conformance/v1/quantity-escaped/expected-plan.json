@@ -1,0 +1,33 @@
+{
+  "control" : {
+    "runId" : "control",
+    "kind" : "CONTROL",
+    "endpoint" : null,
+    "invariant" : null,
+    "field" : null,
+    "mutation" : null,
+    "targetIndex" : 0,
+    "responseBody" : "{\"status\":\"PENDING\",\"quantity\":10}"
+  },
+  "runs" : [ {
+    "runId" : "r0",
+    "kind" : "INVARIANT_VIOLATION",
+    "endpoint" : "/api/v1/orders",
+    "invariant" : "positive_quantity",
+    "field" : "quantity",
+    "mutation" : "Set quantity to 0.0",
+    "targetIndex" : 0,
+    "responseBody" : "{\"status\":\"PENDING\",\"quantity\":0.0}"
+  }, {
+    "runId" : "r1",
+    "kind" : "INVARIANT_VIOLATION",
+    "endpoint" : "/api/v1/orders",
+    "invariant" : "positive_quantity",
+    "field" : "quantity",
+    "mutation" : "Set quantity to -1.0",
+    "targetIndex" : 0,
+    "responseBody" : "{\"status\":\"PENDING\",\"quantity\":-1.0}"
+  } ],
+  "notes" : [ ],
+  "empty" : false
+}

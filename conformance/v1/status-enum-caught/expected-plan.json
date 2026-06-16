@@ -1,0 +1,24 @@
+{
+  "control" : {
+    "runId" : "control",
+    "kind" : "CONTROL",
+    "endpoint" : null,
+    "invariant" : null,
+    "field" : null,
+    "mutation" : null,
+    "targetIndex" : 0,
+    "responseBody" : "{\"status\":\"PENDING\",\"quantity\":10}"
+  },
+  "runs" : [ {
+    "runId" : "r0",
+    "kind" : "INVARIANT_VIOLATION",
+    "endpoint" : "/api/v1/orders",
+    "invariant" : "valid_status",
+    "field" : "status",
+    "mutation" : "Set status to INVALID_VALUE",
+    "targetIndex" : 0,
+    "responseBody" : "{\"status\":\"INVALID_VALUE\",\"quantity\":10}"
+  } ],
+  "notes" : [ ],
+  "empty" : false
+}

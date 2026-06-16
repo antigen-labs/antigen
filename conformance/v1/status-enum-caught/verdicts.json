@@ -1,0 +1,8 @@
+{
+  "sessionId": "conformance",
+  "testId": "OrdersApiTest#getOrder",
+  "verdicts": [
+    { "runId": "control", "passed": true },
+    { "runId": "r0", "passed": false, "error": "expected status to be one of [PENDING, FILLED] but was INVALID_VALUE" }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "/api/v1/orders" : {
+    "invariantFaultCount" : 1,
+    "invariantFaultsCaught" : 1,
+    "invariant_faults" : {
+      "valid_status" : {
+        "caught_by_any_test" : true,
+        "tested_by" : [ "OrdersApiTest#getOrder" ],
+        "caught_by" : [ {
+          "test" : "OrdersApiTest#getOrder",
+          "caught" : true,
+          "error" : "expected status to be one of [PENDING, FILLED] but was INVALID_VALUE"
+        } ]
+      }
+    }
+  }
+}

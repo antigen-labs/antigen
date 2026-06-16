@@ -1,0 +1,9 @@
+{
+  "sessionId": "conformance",
+  "testId": "OrdersApiTest#listOrders",
+  "verdicts": [
+    { "runId": "control", "passed": true },
+    { "runId": "r0", "passed": true },
+    { "runId": "r1", "passed": true }
+  ]
+}

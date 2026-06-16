@@ -1,0 +1,13 @@
+{
+  "/api/v1/orders" : {
+    "invariantFaultCount" : 1,
+    "invariantFaultsCaught" : 0,
+    "invariant_faults" : {
+      "valid_status" : {
+        "caught_by_any_test" : false,
+        "tested_by" : [ "OrdersApiTest#getDeletedOrder" ],
+        "caught_by" : [ ]
+      }
+    }
+  }
+}

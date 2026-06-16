@@ -54,4 +54,7 @@ publishing {
 
 tasks.test {
     useJUnitPlatform()
+    // Forward the conformance golden-regeneration switch to the test JVM (off by default).
+    systemProperty("antigen.conformance.regenerate",
+        providers.systemProperty("antigen.conformance.regenerate").getOrElse("false"))
 }

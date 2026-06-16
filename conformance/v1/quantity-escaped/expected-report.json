@@ -1,0 +1,13 @@
+{
+  "/api/v1/orders" : {
+    "invariantFaultCount" : 1,
+    "invariantFaultsCaught" : 0,
+    "invariant_faults" : {
+      "positive_quantity" : {
+        "caught_by_any_test" : false,
+        "tested_by" : [ "OrdersApiTest#listOrders" ],
+        "caught_by" : [ ]
+      }
+    }
+  }
+}

@@ -8,6 +8,13 @@ description: Run Antigen's unit test tier (io.antigen.core.unit.*). Use when ask
 The unit tier covers `io.antigen.core.unit.*` (config, invariant, report). Pure logic,
 no network, no AspectJ weaving. It is the fastest gate and has no external prerequisites.
 
+Since the Phase 2b module split the unit tier spans **both** `antigen-engine` and
+`antigen-test-runner`, so a global `--tests "*.unit.*"` is correct here (unlike `test-integration`
+/ `test-e2e`, which must scope to `:antigen-test-runner`). Note this filter does **not** include
+the engine's conformance vectors (`io.antigen.core.conformance.*`) or purity guard
+(`io.antigen.core.unit.arch.EngineLayerTest` is in-package, so it does run) — run the full
+`:antigen-engine:test` to exercise the conformance golden replay.
+
 ## Command
 
 ```bash

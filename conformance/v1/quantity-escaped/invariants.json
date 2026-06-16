@@ -1,0 +1,5 @@
+{
+  "/api/v1/orders::GET": [
+    { "name": "positive_quantity", "field": "quantity", "greater_than": 0 }
+  ]
+}

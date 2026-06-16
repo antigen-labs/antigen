@@ -10,7 +10,7 @@ import io.antigen.core.plan.FaultPlanner;
 import io.antigen.core.plan.PlannedNote;
 import io.antigen.core.plan.PlannedRun;
 import io.antigen.core.simulation.FaultSimulationReport;
-import io.antigen.core.simulation.TestLevelSimulationResults;
+import io.antigen.core.simulation.VerdictScorer;
 import org.aspectj.lang.ProceedingJoinPoint;
 
 import java.util.List;
@@ -68,11 +68,7 @@ public final class Runner {
         // Pre-determined outcomes (baseline already violates / conditional not applicable):
         // recorded as not caught, no re-run.
         for (PlannedNote note : plan.getNotes()) {
-            TestLevelSimulationResults result = new TestLevelSimulationResults();
-            result.setTest(testName);
-            result.setCaught(false);
-            result.setError(note.getMessage());
-            REPORT.recordInvariantResult(note.getEndpoint(), note.getInvariant(), result);
+            VerdictScorer.scoreNote(REPORT, testName, note);
         }
 
         for (PlannedRun run : plan.getRuns()) {
@@ -93,24 +89,21 @@ public final class Runner {
         System.out.printf("    -> %s [%s] %s%n", run.getRunId(), run.getInvariant(), run.getMutation());
 
         Throwable failure = runOnce(joinPoint, context, run, capturedRequests);
+        boolean passed = failure == null;
 
-        TestLevelSimulationResults result = new TestLevelSimulationResults();
-        result.setTest(testName);
-        if (failure == null) {
-            result.setCaught(false);
+        // Single source of truth for verdict→score (shared with the protocol path).
+        VerdictScorer.scoreFaultRun(REPORT, testName, run, passed, passed ? null : failure.getMessage());
+
+        if (passed) {
             System.err.printf("    [ESCAPED] '%s' passed despite violation of '%s' on '%s'%n",
                     testName, run.getInvariant(), run.getField());
         } else {
-            result.setCaught(true);
-            result.setError(failure.getMessage());
             System.out.printf("    [CAUGHT] '%s' failed as expected for violation of '%s' on '%s'%n",
                     testName, run.getInvariant(), run.getField());
             if (stopOnFirstCatch) {
                 REPORT.markInvariantFaultCaught(run.getEndpoint(), run.getInvariant());
             }
         }
-
-        REPORT.recordInvariantResult(run.getEndpoint(), run.getInvariant(), result);
     }
 
     /**

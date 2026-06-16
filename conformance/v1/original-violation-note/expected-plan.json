@@ -1,0 +1,20 @@
+{
+  "control" : {
+    "runId" : "control",
+    "kind" : "CONTROL",
+    "endpoint" : null,
+    "invariant" : null,
+    "field" : null,
+    "mutation" : null,
+    "targetIndex" : 0,
+    "responseBody" : "{\"status\":\"DELETED\"}"
+  },
+  "runs" : [ ],
+  "notes" : [ {
+    "endpoint" : "/api/v1/orders",
+    "invariant" : "valid_status",
+    "reason" : "ORIGINAL_VIOLATION",
+    "message" : "[ORIGINAL VIOLATION] Baseline response already fails this invariant: Value not in allowed list"
+  } ],
+  "empty" : false
+}
