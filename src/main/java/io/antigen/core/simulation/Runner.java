@@ -1,20 +1,32 @@
 package io.antigen.core.simulation;
 
+import io.antigen.core.config.ResolvedTestConfig;
 import io.antigen.core.config.SimulatorConfig;
-import io.antigen.core.interceptor.TestContext;
-import io.antigen.core.http.Request;
 import io.antigen.core.http.Response;
-import io.antigen.core.invariant.InvariantSimulator;
-import io.antigen.core.normalizer.EndpointPatternNormalizer;
+import io.antigen.core.interceptor.TestContext;
+import io.antigen.core.plan.FaultPlan;
+import io.antigen.core.plan.FaultPlanner;
+import io.antigen.core.plan.PlannedNote;
+import io.antigen.core.plan.PlannedRun;
 import org.aspectj.lang.ProceedingJoinPoint;
 
-import java.net.URI;
-import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Adapter loop (runtime/execution half — architecture §3, Phase 1).
+ *
+ * <p>Asks the pure {@link FaultPlanner} for a {@link FaultPlan}, then for each planned run sets
+ * the test context, re-runs the test via {@code joinPoint.proceed()} (responses served from the
+ * cache by {@code AspectExecutor}), and records the caught/escaped verdict. Holds the only
+ * dependency on JUnit/AspectJ; the planner stays free of it.
+ *
+ * <p>{@code stop_on_first_catch} is applied here, live, against the report's caught-state — the
+ * faithful translation of the previous inline behavior (see {@code refactor/phase1.md}).
+ */
 public final class Runner {
 
     private static final FaultSimulationReport REPORT = FaultSimulationReport.getInstance();
+    private static final FaultPlanner PLANNER = new FaultPlanner();
 
     private Runner() {}
 
@@ -27,75 +39,67 @@ public final class Runner {
             return;
         }
 
+        FaultPlan plan = PLANNER.plan(capturedRequests, context.getResolvedTestConfig());
+
         System.out.printf("%n[Antigen-Sim] === Starting simulations for test: '%s' ===%n", testName);
-        System.out.printf("[Antigen-Sim] Captured %d HTTP request(s)%n", capturedRequests.size());
+        System.out.printf("[Antigen-Sim] Plan: %d run(s), %d note(s)%n",
+                plan.getRuns().size(), plan.getNotes().size());
 
-        List<TestContext.RequestResponsePair> requestsToSimulate = filterRequestsByStrategy(capturedRequests);
-        System.out.printf("[Antigen-Sim] Simulating %d request(s) after applying strategy%n", requestsToSimulate.size());
+        boolean stopOnFirstCatch = (context.getResolvedTestConfig() != null)
+                ? context.getResolvedTestConfig().isStopOnFirstCatch()
+                : SimulatorConfig.isStopOnFirstCatchEnabled();
 
-        for (TestContext.RequestResponsePair pair : requestsToSimulate) {
-            int requestIndex = capturedRequests.indexOf(pair);
-            Request originalRequest = pair.getRequest();
-            Response originalResponse = pair.getResponse();
+        // Pre-determined outcomes (baseline already violates / conditional not applicable):
+        // recorded as not caught, no re-run.
+        for (PlannedNote note : plan.getNotes()) {
+            TestLevelSimulationResults result = new TestLevelSimulationResults();
+            result.setTest(testName);
+            result.setCaught(false);
+            result.setError(note.getMessage());
+            REPORT.recordInvariantResult(note.getEndpoint(), note.getInvariant(), result);
+        }
 
-            if (originalResponse == null || originalRequest == null) {
-                System.err.println("[Antigen-WARN] Incomplete request/response pair. Skipping.");
+        for (PlannedRun run : plan.getRuns()) {
+            if (stopOnFirstCatch && REPORT.isInvariantFaultCaught(run.getEndpoint(), run.getInvariant())) {
                 continue;
             }
-
-            String endpointPath = URI.create(originalRequest.getUrl()).getPath();
-            String endpointPattern = EndpointPatternNormalizer.normalize(endpointPath);
-            String httpMethod = originalRequest.getMethod();
-
-            System.out.printf("%n[Antigen-Sim] --- Request #%d: '%s' (pattern: '%s') ---%n",
-                    requestIndex, endpointPath, endpointPattern);
-
-            if (!SimulatorConfig.shouldSimulateResponse(
-                    originalResponse.getStatusCode(),
-                    originalResponse.getResponseAsMap(),
-                    originalResponse.getBody())) {
-                System.out.printf("[Antigen-Sim] Skipping request #%d (status: %d)%n",
-                        requestIndex, originalResponse.getStatusCode());
-                continue;
-            }
-
-            context.setCurrentSimulationIndex(requestIndex);
-
-            InvariantSimulator.simulateInvariantViolations(
-                    joinPoint, context, testName, endpointPattern, httpMethod,
-                    originalResponse, requestIndex);
+            executeRun(joinPoint, context, testName, run, capturedRequests, stopOnFirstCatch);
         }
 
         context.setCurrentSimulationIndex(-1);
         System.out.printf("[Antigen-Sim] === Completed all simulations for test: '%s' ===%n%n", testName);
     }
 
-    private static List<TestContext.RequestResponsePair> filterRequestsByStrategy(
-            List<TestContext.RequestResponsePair> capturedRequests) {
+    private static void executeRun(ProceedingJoinPoint joinPoint, TestContext context, String testName,
+                                   PlannedRun run, List<TestContext.RequestResponsePair> capturedRequests,
+                                   boolean stopOnFirstCatch) {
 
-        SimulatorConfig.MultipleEndpointsStrategy strategy = SimulatorConfig.getMultipleEndpointsStrategy();
-        List<TestContext.RequestResponsePair> filtered = new ArrayList<>();
+        Response baseline = capturedRequests.get(run.getTargetIndex()).getResponse();
+        context.setSimulatedResponse(baseline.withBody(run.getResponseBody()));
+        context.setCurrentSimulationIndex(run.getTargetIndex());
 
-        if (strategy.test_only_last_endpoint) {
-            if (!capturedRequests.isEmpty()) {
-                filtered.add(capturedRequests.get(capturedRequests.size() - 1));
+        System.out.printf("    -> %s [%s] %s%n", run.getRunId(), run.getInvariant(), run.getMutation());
+
+        TestLevelSimulationResults result = new TestLevelSimulationResults();
+        result.setTest(testName);
+        try {
+            context.resetRequestCounter();
+            joinPoint.proceed(); // re-run; AspectExecutor serves cached + mutated bodies
+            result.setCaught(false);
+            System.err.printf("    [ESCAPED] '%s' passed despite violation of '%s' on '%s'%n",
+                    testName, run.getInvariant(), run.getField());
+        } catch (Throwable t) {
+            result.setCaught(true);
+            result.setError(t.getMessage());
+            System.out.printf("    [CAUGHT] '%s' failed as expected for violation of '%s' on '%s'%n",
+                    testName, run.getInvariant(), run.getField());
+            if (stopOnFirstCatch) {
+                REPORT.markInvariantFaultCaught(run.getEndpoint(), run.getInvariant());
             }
-        } else {
-            filtered.addAll(capturedRequests);
+        } finally {
+            context.clearSimulation();
         }
 
-        if (strategy.exclude_endpoints != null && !strategy.exclude_endpoints.isEmpty()) {
-            List<TestContext.RequestResponsePair> afterExclusion = new ArrayList<>();
-            for (TestContext.RequestResponsePair pair : filtered) {
-                String endpointPattern = EndpointPatternNormalizer.normalize(
-                        URI.create(pair.getRequest().getUrl()).getPath());
-                boolean excluded = strategy.exclude_endpoints.stream()
-                        .anyMatch(endpointPattern::matches);
-                if (!excluded) afterExclusion.add(pair);
-            }
-            return afterExclusion;
-        }
-
-        return filtered;
+        REPORT.recordInvariantResult(run.getEndpoint(), run.getInvariant(), result);
     }
 }
