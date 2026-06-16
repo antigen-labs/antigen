@@ -1,5 +1,7 @@
-package io.antigen.core.http;
+package io.antigen.core.http.apache;
 
+import io.antigen.core.http.Request;
+import io.antigen.core.http.Response;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpRequestBase;
 

@@ -4,10 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.antigen.core.config.InvariantConfig;
 import io.antigen.core.config.ConditionConfig;
 import io.antigen.core.config.ResolvedTestConfig;
-import io.antigen.core.http.ApacheHTTPResponse;
+import io.antigen.core.http.apache.ApacheHTTPResponse;
 import io.antigen.core.http.Request;
+import io.antigen.core.http.RequestResponsePair;
 import io.antigen.core.http.Response;
-import io.antigen.core.interceptor.TestContext;
 import io.antigen.core.plan.FaultPlan;
 import io.antigen.core.plan.FaultPlanner;
 import io.antigen.core.plan.PlannedNote;
@@ -67,9 +67,9 @@ class FaultPlannerTest {
         }
     }
 
-    private static List<TestContext.RequestResponsePair> captures(String method, int status, String body) {
-        List<TestContext.RequestResponsePair> list = new ArrayList<>();
-        list.add(new TestContext.RequestResponsePair(request(URL, method), response(status, body)));
+    private static List<RequestResponsePair> captures(String method, int status, String body) {
+        List<RequestResponsePair> list = new ArrayList<>();
+        list.add(new RequestResponsePair(request(URL, method), response(status, body)));
         return list;
     }
 

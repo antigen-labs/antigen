@@ -73,6 +73,9 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.assertj:assertj-core:3.24.2")
     testImplementation("org.mockito:mockito-core:5.12.0")
+
+    // ArchUnit — enforces engine ← adapter ← cli dependency direction (Phase 2 boundary guard)
+    testImplementation("com.tngtech.archunit:archunit-junit5:1.3.0")
 }
 
 tasks.test {

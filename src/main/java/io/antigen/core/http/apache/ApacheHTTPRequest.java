@@ -1,5 +1,6 @@
-package io.antigen.core.http;
+package io.antigen.core.http.apache;
 
+import io.antigen.core.http.Request;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;

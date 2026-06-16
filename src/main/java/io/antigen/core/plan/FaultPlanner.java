@@ -6,8 +6,8 @@ import io.antigen.core.config.InvariantConfig;
 import io.antigen.core.config.ResolvedTestConfig;
 import io.antigen.core.config.SimulatorConfig;
 import io.antigen.core.http.Request;
+import io.antigen.core.http.RequestResponsePair;
 import io.antigen.core.http.Response;
-import io.antigen.core.interceptor.TestContext;
 import io.antigen.core.invariant.ConditionEvaluator;
 import io.antigen.core.invariant.Mutation;
 import io.antigen.core.invariant.ViolationGenerator;
@@ -26,7 +26,7 @@ import java.util.Map;
  * {@link FaultPlan}: the exact set of re-runs to execute, each carrying a fully-formed mutated
  * response body, plus pre-determined notes for invariants that need no re-run. It performs
  * <em>no</em> test execution, holds no report state, and never calls {@code joinPoint.proceed()}
- * — that is the adapter loop's job ({@code io.antigen.core.simulation.Runner}).
+ * — that is the adapter loop's job ({@code io.antigen.core.runner.Runner}).
  *
  * <p>Scheduling concerns that depend on cross-test outcome state ({@code stop_on_first_catch})
  * are intentionally <em>not</em> applied here; the adapter applies them live. See
@@ -46,7 +46,7 @@ public class FaultPlanner {
      * @param resolvedConfig   the merged per-test config; may be {@code null} (falls back to the
      *                         global {@link SimulatorConfig})
      */
-    public FaultPlan plan(List<TestContext.RequestResponsePair> capturedRequests,
+    public FaultPlan plan(List<RequestResponsePair> capturedRequests,
                           ResolvedTestConfig resolvedConfig) {
         FaultPlan plan = new FaultPlan();
         if (capturedRequests == null || capturedRequests.isEmpty()) {
@@ -56,7 +56,7 @@ public class FaultPlanner {
         int[] runCounter = {0};
         int firstSimulatedIndex = -1;
         String firstSimulatedBody = null;
-        for (TestContext.RequestResponsePair pair : filterRequestsByStrategy(capturedRequests)) {
+        for (RequestResponsePair pair : filterRequestsByStrategy(capturedRequests)) {
             int requestIndex = capturedRequests.indexOf(pair);
             Request request = pair.getRequest();
             Response response = pair.getResponse();
@@ -174,11 +174,11 @@ public class FaultPlanner {
     }
 
     /** Mirrors the request-selection strategy formerly in {@code Runner}. */
-    private static List<TestContext.RequestResponsePair> filterRequestsByStrategy(
-            List<TestContext.RequestResponsePair> capturedRequests) {
+    private static List<RequestResponsePair> filterRequestsByStrategy(
+            List<RequestResponsePair> capturedRequests) {
 
         SimulatorConfig.MultipleEndpointsStrategy strategy = SimulatorConfig.getMultipleEndpointsStrategy();
-        List<TestContext.RequestResponsePair> filtered = new ArrayList<>();
+        List<RequestResponsePair> filtered = new ArrayList<>();
 
         if (strategy.test_only_last_endpoint) {
             if (!capturedRequests.isEmpty()) {
@@ -189,8 +189,8 @@ public class FaultPlanner {
         }
 
         if (strategy.exclude_endpoints != null && !strategy.exclude_endpoints.isEmpty()) {
-            List<TestContext.RequestResponsePair> afterExclusion = new ArrayList<>();
-            for (TestContext.RequestResponsePair pair : filtered) {
+            List<RequestResponsePair> afterExclusion = new ArrayList<>();
+            for (RequestResponsePair pair : filtered) {
                 String endpointPattern = EndpointPatternNormalizer.normalize(
                         URI.create(pair.getRequest().getUrl()).getPath());
                 boolean excluded = strategy.exclude_endpoints.stream().anyMatch(endpointPattern::matches);

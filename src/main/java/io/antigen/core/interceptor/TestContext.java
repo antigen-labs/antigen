@@ -3,6 +3,7 @@ package io.antigen.core.interceptor;
 import lombok.Data;
 import io.antigen.core.config.ResolvedTestConfig;
 import io.antigen.core.http.Request;
+import io.antigen.core.http.RequestResponsePair;
 import io.antigen.core.http.Response;
 
 import java.util.ArrayList;
@@ -10,17 +11,6 @@ import java.util.List;
 
 @Data
 public class TestContext {
-
-    @Data
-    public static class RequestResponsePair {
-        private Request request;
-        private Response response;
-
-        public RequestResponsePair(Request request, Response response) {
-            this.request = request;
-            this.response = response;
-        }
-    }
 
     private String testName;
     private ResolvedTestConfig resolvedTestConfig;

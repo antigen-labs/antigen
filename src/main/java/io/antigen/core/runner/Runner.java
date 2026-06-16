@@ -1,13 +1,16 @@
-package io.antigen.core.simulation;
+package io.antigen.core.runner;
 
 import io.antigen.core.config.ResolvedTestConfig;
 import io.antigen.core.config.SimulatorConfig;
+import io.antigen.core.http.RequestResponsePair;
 import io.antigen.core.http.Response;
 import io.antigen.core.interceptor.TestContext;
 import io.antigen.core.plan.FaultPlan;
 import io.antigen.core.plan.FaultPlanner;
 import io.antigen.core.plan.PlannedNote;
 import io.antigen.core.plan.PlannedRun;
+import io.antigen.core.simulation.FaultSimulationReport;
+import io.antigen.core.simulation.TestLevelSimulationResults;
 import org.aspectj.lang.ProceedingJoinPoint;
 
 import java.util.List;
@@ -33,7 +36,7 @@ public final class Runner {
     public static void executeTestWithSimulatedFaults(ProceedingJoinPoint joinPoint, TestContext context) throws Throwable {
         String testName = joinPoint.getSignature().getName();
 
-        List<TestContext.RequestResponsePair> capturedRequests = context.getCapturedRequests();
+        List<RequestResponsePair> capturedRequests = context.getCapturedRequests();
         if (capturedRequests == null || capturedRequests.isEmpty()) {
             System.err.println("[Antigen-WARN] No requests were captured. Skipping fault simulation.");
             return;
@@ -84,7 +87,7 @@ public final class Runner {
     }
 
     private static void executeRun(ProceedingJoinPoint joinPoint, TestContext context, String testName,
-                                   PlannedRun run, List<TestContext.RequestResponsePair> capturedRequests,
+                                   PlannedRun run, List<RequestResponsePair> capturedRequests,
                                    boolean stopOnFirstCatch) {
 
         System.out.printf("    -> %s [%s] %s%n", run.getRunId(), run.getInvariant(), run.getMutation());
@@ -117,7 +120,7 @@ public final class Runner {
      * (control: failure = flaky; violation: failure = caught).
      */
     private static Throwable runOnce(ProceedingJoinPoint joinPoint, TestContext context,
-                                     PlannedRun run, List<TestContext.RequestResponsePair> capturedRequests) {
+                                     PlannedRun run, List<RequestResponsePair> capturedRequests) {
         Response baseline = capturedRequests.get(run.getTargetIndex()).getResponse();
         context.setSimulatedResponse(baseline.withBody(run.getResponseBody()));
         context.setCurrentSimulationIndex(run.getTargetIndex());

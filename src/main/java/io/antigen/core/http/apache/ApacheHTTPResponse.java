@@ -1,5 +1,6 @@
-package io.antigen.core.http;
+package io.antigen.core.http.apache;
 
+import io.antigen.core.http.Response;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;

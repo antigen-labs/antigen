@@ -5,10 +5,11 @@ import io.antigen.core.config.ResolvedTestConfig;
 import io.antigen.core.config.SimulatorConfig;
 import io.antigen.core.config.TestScopedConfig;
 import io.antigen.core.config.TestScopedConfigCache;
-import io.antigen.core.http.HTTPFactory;
+import io.antigen.core.http.apache.HTTPFactory;
 import io.antigen.core.http.Request;
+import io.antigen.core.http.RequestResponsePair;
 import io.antigen.core.http.Response;
-import io.antigen.core.simulation.Runner;
+import io.antigen.core.runner.Runner;
 import io.antigen.core.interceptor.TestContext;
 import io.antigen.core.interceptor.TestContextManager;
 import io.antigen.core.coverage.Logger;
@@ -132,7 +133,7 @@ public class AspectExecutor {
         // swapping in the mutated body only for the target request index.
         // This prevents server-side state mutations and eliminates network round-trips.
         int requestIndex = context.getAndIncrementRequestCounter();
-        List<TestContext.RequestResponsePair> captured = context.getCapturedRequests();
+        List<RequestResponsePair> captured = context.getCapturedRequests();
 
         Response cached = requestIndex < captured.size()
                 ? captured.get(requestIndex).getResponse()

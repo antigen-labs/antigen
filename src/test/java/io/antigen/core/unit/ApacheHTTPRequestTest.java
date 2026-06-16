@@ -1,5 +1,5 @@
 package io.antigen.core.unit;
-import io.antigen.core.http.ApacheHTTPRequest;
+import io.antigen.core.http.apache.ApacheHTTPRequest;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
