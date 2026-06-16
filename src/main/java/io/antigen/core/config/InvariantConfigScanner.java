@@ -7,7 +7,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Enumeration;
@@ -25,7 +24,7 @@ import java.util.Set;
  *   2. ClassLoader.getResources("antigen/simulation/invariants")  — multi-classloader variant
  *   3. java.class.path system property scanning                    — reliable fallback for Gradle workers
  */
-public class FeatureConfigScanner {
+public class InvariantConfigScanner {
 
     private static final String INVARIANTS_RELATIVE = "antigen/simulation/invariants";
     private static final ObjectMapper YAML_MAPPER = new ObjectMapper(new YAMLFactory());
@@ -52,7 +51,7 @@ public class FeatureConfigScanner {
 
         // Strategy 1: ClassLoader.getResource (singular)
         resolveViaGetResource(Thread.currentThread().getContextClassLoader(), dirs);
-        resolveViaGetResource(FeatureConfigScanner.class.getClassLoader(), dirs);
+        resolveViaGetResource(InvariantConfigScanner.class.getClassLoader(), dirs);
 
         // Strategy 2: ClassLoader.getResources (plural — multiple classpath entries)
         resolveViaGetResources(Thread.currentThread().getContextClassLoader(), dirs);

@@ -101,7 +101,7 @@ Conventions:
   with optional explicit label: `filled_has_ts: status == FILLED => filled_at != null`.
 - Bare identifiers are response fields (current `$.field`); `it` binds the element inside
   quantifiers (current `$[*].field`).
-- File extension: `.ant` (or similar), living alongside / replacing `features/*.yml`.
+- File extension: `.ant` (or similar), living alongside / replacing `invariants/*.yml`.
 
 ---
 
@@ -143,4 +143,4 @@ expressions inside.
 - Turing completeness, user-defined functions, side effects.
 - Replacing the protocol/JSON interchange format — the DSL is an authoring layer only.
 - Requiring migration: YAML and DSL coexist; a `antigen dsl migrate` converter can mechanically
-  translate existing `features/*.yml`.
+  translate existing `invariants/*.yml`.

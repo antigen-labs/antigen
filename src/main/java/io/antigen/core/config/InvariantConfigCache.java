@@ -13,18 +13,18 @@ import java.util.List;
  *   2. feature-level include_only (if present)   — fallback
  *   3. neither → auto: any test that exercises the matching endpoint
  */
-public class FeatureConfigCache {
+public class InvariantConfigCache {
 
-    private static final FeatureConfigCache INSTANCE = new FeatureConfigCache();
+    private static final InvariantConfigCache INSTANCE = new InvariantConfigCache();
 
-    /** All loaded feature configs — small list, iterated per resolve */
+    /** All loaded invariant configs — small list, iterated per resolve */
     private volatile List<FeatureConfig> allFeatures = null;
 
     private final Object initLock = new Object();
 
-    private FeatureConfigCache() {}
+    private InvariantConfigCache() {}
 
-    public static FeatureConfigCache getInstance() {
+    public static InvariantConfigCache getInstance() {
         return INSTANCE;
     }
 
@@ -38,7 +38,7 @@ public class FeatureConfigCache {
         if (allFeatures != null) return;
         synchronized (initLock) {
             if (allFeatures != null) return;
-            allFeatures = new FeatureConfigScanner().scanAll();
+            allFeatures = new InvariantConfigScanner().scanAll();
         }
     }
 }

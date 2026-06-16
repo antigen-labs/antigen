@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
  * Merges all configuration sources into a single ResolvedTestConfig for simulation.
  *
  * Merge order:
- *   1. features/*.yml        (invariants — additive)
+ *   1. invariants/*.yml        (invariants — additive)
  *   2. <ClassName>.antigen.yml class-level
  *   3. <ClassName>.antigen.yml method-level  (most specific)
  *
@@ -26,7 +26,7 @@ public class ConfigResolver {
             Optional<TestScopedConfig> classConfig,
             String methodName) {
 
-        List<FeatureConfig> features = FeatureConfigCache.getInstance().getAllFeatures();
+        List<FeatureConfig> features = InvariantConfigCache.getInstance().getAllFeatures();
 
         TestScopedConfig scopedConfig = classConfig.orElse(null);
         TestMethodConfig methodConfig = scopedConfig != null ? findMethodConfig(scopedConfig, methodName) : null;

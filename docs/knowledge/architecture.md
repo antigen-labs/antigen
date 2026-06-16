@@ -115,7 +115,7 @@ rejects mismatched `protocolVersion` at `session/start`.
   "adapter": { "name": "antigen-pytest", "version": "0.1.0" }
 }
 ```
-→ `{ "sessionId": "..." }`. Engine loads contract.yml, features/*.yml, spec.
+→ `{ "sessionId": "..." }`. Engine loads contract.yml, invariants/*.yml, spec.
 
 ### 4.2 `test/baseline`  (adapter → engine, once per test after baseline run)
 ```json
@@ -247,7 +247,7 @@ local mock API. This is what guarantees detection rates are comparable across la
   agent-suggested, human-approved. The protocol already reflects this: plans carry
   `invariant_violation` runs; do not add a parallel contract-fault run kind.
 - **Invariants are always committed YAML.** Derived/suggested invariants go through human
-  review into `features/*.yml`. The engine never trusts runtime-generated rules; this keeps
+  review into `invariants/*.yml`. The engine never trusts runtime-generated rules; this keeps
   simulation deterministic and the score auditable.
 - **Proxy interception is out of scope.** A mutating proxy cannot control test re-execution
   and forces routing/TLS changes. In-process shims per language are the model; a proxy is a

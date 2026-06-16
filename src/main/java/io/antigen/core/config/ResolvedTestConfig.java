@@ -8,7 +8,7 @@ import java.util.regex.Pattern;
 
 /**
  * The fully-merged configuration for a single test method execution.
- * Produced by ConfigResolver by combining: features/*.yml + class .antigen.yml + method .antigen.yml
+ * Produced by ConfigResolver by combining: invariants/*.yml + class .antigen.yml + method .antigen.yml
  *
  * - invariants:  additive (all levels contribute)
  * - settings:    override (most specific wins)
