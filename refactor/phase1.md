@@ -81,17 +81,72 @@ moved to `Runner`. It had no callers other than `Runner` (`hasInvariants` was de
   temporal `*_updated_after_created` / `created_before_filled` + the intentional `token_type_bearer`
   `include_only` DEMO invariant). Matches the pre-refactor baseline → behavior preserved.
 
-## Deferred to 1b
+## Unit coverage (added after 1a)
 
-- **`CONTROL` runs.** `RunKind.CONTROL` is reserved but not yet emitted. 1b: planner emits a control
-  run (unmutated baseline body) per simulated request; adapter runs it first and, if it **fails**,
-  flags the test flaky/state-dependent and excludes its verdicts from the score. Needs new report
-  surface for flaky flagging (architecture.md §4.4 `flakyTests`).
-- **A `FaultPlanner` unit test.** The planner is now a pure function and should get direct
-  unit coverage (captures + config → expected plan), independent of the live e2e run. Natural
-  precursor to the Phase 6 conformance vectors.
+`src/test/java/io/antigen/core/unit/plan/FaultPlannerTest.java` — direct coverage of the pure
+planner: satisfied invariant → fully-formed violation run (mutated field, other fields preserved);
+baseline-already-violates → `ORIGINAL_VIOLATION` note, no run; conditional precondition unmet →
+`NOT_APPLICABLE` note; non-2xx / no-invariant / empty captures → empty plan; sequential unique run
+ids; plus the control-run cases below. Precursor to the Phase 6 conformance vectors.
+
+---
+
+# Phase 1b — Control runs + flaky exclusion
+
+> Status: **done**. Builds on the 1a seam; adds new behavior (roadmap #4, architecture.md §4.2/§4.4).
+
+## Goal
+
+Before scoring, re-run each test once with the **unmutated** cached baseline. If the test fails
+that replay it is flaky/state-dependent — flag it and exclude all its verdicts from the score. This
+makes the detection rate trustworthy and gives flakiness detection for free.
+
+## What changed
+
+- **`RunKind.CONTROL` is now emitted.** `FaultPlanner` attaches **one** control run per test (new
+  `FaultPlan.control` field), not one per request — a control validates that the whole test replays
+  deterministically. It targets the first request that contributed invariant activity and carries
+  that request's **unmutated** baseline body. Emitted whenever there is any activity to gate
+  (runs *or* notes); `null` otherwise.
+- **`Runner` gates on it.** The control runs first. On failure: `REPORT.markFlaky(testName)`,
+  log, and **return** — skipping all notes and invariant runs for that test (excluded from score).
+  On pass: proceed as in 1a.
+- **Execution unified.** Extracted `runOnce(...)` (install body at target index → `proceed()` →
+  return throwable-or-null). Control and invariant runs share it; only verdict *interpretation*
+  differs (control: failure = flaky; violation: failure = caught).
+- **Report surface.** `FaultSimulationReport` gains a `flakyTests` set (`markFlaky` /
+  `getFlakyTests`) and prints a "Flaky/excluded (failed control run)" section in the console
+  summary (now printed even when every result was excluded).
+
+## Key decisions
+
+1. **One control per test, not per request.** The flaky signal is about the test's determinism
+   under replay; a single whole-test re-run is the faithful check and matches the protocol's single
+   control entry (architecture.md §4.2).
+2. **Control must keep `currentSimulationIndex >= 0`.** `AspectExecutor` treats index `-1` as the
+   *baseline* branch and would issue **real** HTTP calls. So the control run sets a valid target
+   index with `responseBody == the unmutated baseline body`: the replay path is used, every request
+   is served from cache, nothing is mutated. (Setting `simulatedResponse` to the same bytes as the
+   cache is a deliberate no-op mutation.)
+3. **Flaky ⇒ exclude everything, including notes.** Notes are not-caught verdicts; a flaky test's
+   notes are noise, so they are skipped too. Non-flaky tests on the same invariant still record, so
+   `caught_by_any_test` is unaffected.
+4. **Flaky list is console + in-memory only for now.** Not yet written to
+   `fault_simulation_report.json` (would be a schema addition); the protocol `session/end` summary
+   (architecture.md §4.4) is the place to surface it when the server lands.
+
+## Verification
+
+- Unit tier — green (control-run cases added: control present for run-bearing and note-only plans;
+  absent when nothing to simulate; replays the unmutated baseline body).
+- Integration tier — green (empty plan as before; no invariants for mock endpoints).
+- E2e tier (live demo-api) — **39 faults, 33 caught, 6 escaped (15%), 0 infra-errors, 0 flaky**.
+  Identical to the 1a baseline: the demoapi suite is deterministic under cache replay, so no test is
+  excluded and scoring is unchanged. (A non-zero flaky count here would have signalled a replay
+  fidelity bug, not test flakiness — useful canary.)
 
 ## Follow-ups surfaced (not in scope)
 
+- Surface `flakyTests` in the JSON/HTML report and the future `session/end` summary.
 - Array-path invariants (`$[*].field`) still generate zero mutations (`ViolationGenerator` skips
   them) despite being documented — pre-existing, unchanged here.

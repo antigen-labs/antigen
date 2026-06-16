@@ -54,6 +54,8 @@ public class FaultPlanner {
         }
 
         int[] runCounter = {0};
+        int firstSimulatedIndex = -1;
+        String firstSimulatedBody = null;
         for (TestContext.RequestResponsePair pair : filterRequestsByStrategy(capturedRequests)) {
             int requestIndex = capturedRequests.indexOf(pair);
             Request request = pair.getRequest();
@@ -71,7 +73,20 @@ public class FaultPlanner {
             String endpoint = EndpointPatternNormalizer.normalize(endpointPath);
             String method = request.getMethod();
 
+            int before = plan.getRuns().size() + plan.getNotes().size();
             planRequest(plan, runCounter, endpoint, method, response, requestIndex, resolvedConfig);
+
+            // Remember the first request that contributed invariant activity — the control run
+            // replays the test with this request's unmutated baseline body still in place.
+            if (firstSimulatedIndex == -1 && plan.getRuns().size() + plan.getNotes().size() > before) {
+                firstSimulatedIndex = requestIndex;
+                firstSimulatedBody = response.getBody();
+            }
+        }
+
+        // One control run per test, gating all invariant verdicts. Only when there is activity to gate.
+        if (firstSimulatedIndex != -1) {
+            plan.setControl(PlannedRun.control(firstSimulatedIndex, firstSimulatedBody));
         }
         return plan;
     }

@@ -19,6 +19,7 @@ public class FaultSimulationReport {
     private final Map<String, EndpointFaultResults> report = new ConcurrentHashMap<>();
     private final ObjectMapper objectMapper;
     private final Set<String> caughtFaults = ConcurrentHashMap.newKeySet();
+    private final Set<String> flakyTests = ConcurrentHashMap.newKeySet();
 
     private FaultSimulationReport() {
         this.objectMapper = new ObjectMapper();
@@ -50,6 +51,13 @@ public class FaultSimulationReport {
 
     public void clearCaughtFaultsTracking() { caughtFaults.clear(); }
 
+    // ── flaky-test tracking (failed control run) ──────────────────────────────
+
+    /** Flags a test as flaky/state-dependent — its control run failed, so its verdicts are excluded. */
+    public void markFlaky(String testName) { if (testName != null) flakyTests.add(testName); }
+
+    public Set<String> getFlakyTests() { return flakyTests; }
+
     // ── Console summary ───────────────────────────────────────────────────────
 
     public void printConsoleSummary() {
@@ -68,9 +76,8 @@ public class FaultSimulationReport {
             }
         }
 
-        if (globalTotal == 0) return;
+        if (globalTotal == 0 && flakyTests.isEmpty()) return;
 
-        double rate = globalCaught * 100.0 / globalTotal;
         String sep = "=".repeat(70);
         String div = "-".repeat(70);
 
@@ -78,8 +85,15 @@ public class FaultSimulationReport {
         System.out.println(sep);
         System.out.println(" Antigen — Simulation Run Summary");
         System.out.println(sep);
-        System.out.printf(" Overall: %d total  |  %d detected (%.0f%%)  |  %d escaped%n",
-                globalTotal, globalCaught, rate, globalTotal - globalCaught);
+        if (globalTotal > 0) {
+            double rate = globalCaught * 100.0 / globalTotal;
+            System.out.printf(" Overall: %d total  |  %d detected (%.0f%%)  |  %d escaped%n",
+                    globalTotal, globalCaught, rate, globalTotal - globalCaught);
+        }
+        if (!flakyTests.isEmpty()) {
+            System.out.printf(" Flaky/excluded (failed control run): %d%n", flakyTests.size());
+            for (String t : flakyTests) System.out.println("   [!] " + t);
+        }
 
         if (!perTestStats.isEmpty()) {
             List<Map.Entry<String, int[]>> sorted = new ArrayList<>(perTestStats.entrySet());

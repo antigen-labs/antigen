@@ -36,6 +36,20 @@ public class PlannedRun {
     /** The exact response body to serve at {@link #targetIndex} during the re-run. */
     private String responseBody;
 
+    /**
+     * A control run: re-run the test with the unmutated baseline body at {@code targetIndex} (so
+     * every request replays from cache, nothing mutated). If the test fails this, it is
+     * flaky/state-dependent and its verdicts are excluded from the score.
+     */
+    public static PlannedRun control(int targetIndex, String responseBody) {
+        PlannedRun run = new PlannedRun();
+        run.runId = "control";
+        run.kind = RunKind.CONTROL;
+        run.targetIndex = targetIndex;
+        run.responseBody = responseBody;
+        return run;
+    }
+
     public static PlannedRun invariantViolation(String runId, String endpoint, String invariant,
                                                 String field, String mutation,
                                                 int targetIndex, String responseBody) {

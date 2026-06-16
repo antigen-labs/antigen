@@ -16,6 +16,13 @@ import java.util.List;
 @Data
 public class FaultPlan {
 
+    /**
+     * Optional control run executed before scoring: re-runs the test with the unmutated baseline.
+     * A failure means the test is flaky/state-dependent and its verdicts are excluded. {@code null}
+     * when the plan has no invariant activity to gate.
+     */
+    private PlannedRun control;
+
     private final List<PlannedRun> runs = new ArrayList<>();
     private final List<PlannedNote> notes = new ArrayList<>();
 
@@ -23,5 +30,5 @@ public class FaultPlan {
 
     public void addNote(PlannedNote note) { notes.add(note); }
 
-    public boolean isEmpty() { return runs.isEmpty() && notes.isEmpty(); }
+    public boolean isEmpty() { return control == null && runs.isEmpty() && notes.isEmpty(); }
 }
