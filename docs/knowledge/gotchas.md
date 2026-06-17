@@ -55,6 +55,32 @@ Recurrent traps in Antigen development and their fixes. Format: **Symptom → Ca
   recursive over maps+lists, scalars shared). Keep `LinkedHashMap`/`ArrayList` so field order stays
   byte-stable for the conformance vectors. Confirmed: conformance unchanged, demoapi held 39/33/6.
 
+## Foreign adapter: per-test-file engine spawn → split/overwritten report (Jest)
+
+- **Symptom:** running the TS adapter over multiple test files yields a report covering only the
+  *last* file (or N separate reports), even though every file ran faults.
+- **Cause:** Jest sandboxes each test file's module registry, so a module-level singleton (the
+  `FaultSimulator` / its `EngineClient`) is re-created per file. A per-file spawn means one engine
+  process and one `session/end` (→ one `build/antigen/fault_simulation_report.json`, fixed path)
+  per file — last write wins.
+- **Fix:** one engine + **one session for the whole run**. Spawn the engine once in Jest
+  `globalSetup` (HTTP transport, shared port), hand the `{port, sessionId}` to per-worker
+  simulators on disk (`engine-session.json`), and call `session/end` once in `globalTeardown`. Run
+  `maxWorkers: 1` so the shared session is scored serially (architecture §8). stdio's
+  one-process-pipe model can't span Jest workers — use HTTP here.
+
+## Foreign adapter: spawned engine keeps the test runner alive (won't exit)
+
+- **Symptom:** "Jest did not exit one second after the test run has completed"; a `java` process
+  lingers after the run.
+- **Cause:** the spawned engine subprocess (piped stdio) keeps the runner's event loop alive, and
+  `globalSetup`/`globalTeardown` **don't share module state** in Jest, so an in-memory process
+  handle stashed at setup is `undefined` at teardown.
+- **Fix:** `child.unref()` the engine once its port banner is read; record its **pid** in the
+  session file and kill by pid in teardown (`taskkill /PID <pid> /T /F` on Windows, `process.kill`
+  elsewhere); set Jest `forceExit: true` as a backstop. Don't rely on a `globalThis` handle across
+  setup/teardown.
+
 ## JitPack doesn't pick up a new tag / example won't resolve
 
 - **Symptom:** the example fails to resolve `com.github.antigen-labs:antigen:vX.Y`.
