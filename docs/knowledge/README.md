@@ -14,6 +14,9 @@ conventions below.
   code map, target architecture, the JSON protocol, migration phases, conformance vectors.
 - [dsl.md](dsl.md) — the (future) logic-based invariant authoring DSL and the invertibility law
   that bounds what the grammar may admit.
+- [invariant-derivation.md](invariant-derivation.md) — where invariants come from long-term:
+  AI/auto-derivation with high-level human approval, and the independence-of-derivation principle
+  that keeps the caught/escaped metric honest.
 - [roadmap.md](roadmap.md) — prioritized feature ideas; the language-neutral protocol as centerpiece.
 
 ### Operational

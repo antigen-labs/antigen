@@ -19,7 +19,7 @@ flowchart TB
 
     JAVA["<b>antigen-test-runner</b><br/>Java adapter · JUnit + RestAssured"]
     TS["<b>antigen-typescript</b><br/>Jest + Axios adapter"]
-    PY["<b>antigen-python</b><br/>pytest adapter <i>(in progress)</i>"]
+    PY["<b>antigen-python</b><br/>pytest + requests adapter"]
 
     SUT["system under test<br/>(live backend / WireMock)"]
     CLI["antigen-cli<br/>AI test-gen loop"]
@@ -31,7 +31,7 @@ flowchart TB
 
     JAVA -. "in-process calls" .-> ENGINE
     TS -- "protocol (HTTP)" --> ENGINE
-    PY -. "protocol (planned)" .-> ENGINE
+    PY -- "protocol (HTTP)" --> ENGINE
 
     JAVA -- "baseline HTTP" --> SUT
     TS -- "baseline HTTP" --> SUT
@@ -148,4 +148,4 @@ verdicts). The adapter reports raw pass/fail — interpretation is the engine's 
 |------|------|---------------------|
 | `antigen` | engine + Java adapter + CLI + conformance vectors | in-process (Java adapter) |
 | `antigen-typescript` | Jest + Axios adapter | protocol (HTTP), spawns fat jar |
-| `antigen-python` | pytest adapter (Phase 5, in progress) | protocol (planned) |
+| `antigen-python` | pytest + requests adapter | protocol (HTTP), spawns fat jar |

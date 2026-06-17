@@ -1,13 +1,14 @@
-# Phase 5 — Foreign adapters: TypeScript first
+# Phase 5 — Foreign adapters: TypeScript, then Python
 
-> Status: **in progress (TypeScript).** Rebases the existing TS POC (`antigen-typescript`,
-> sibling repo) off its local mutation/scoring engine and onto the §4 protocol, spawning the
-> Phase 4 fat jar over stdio. Python (`antigen-python`) follows once the protocol-client + replay
-> shape is proven here.
+> Status: **done (TypeScript + Python).** Rebases the existing TS and Python POCs
+> (`antigen-typescript`, `antigen-python`, sibling repos) off their local mutation/scoring engines
+> and onto the §4 protocol, each spawning the Phase 4 fat jar over **localhost HTTP**. TypeScript
+> was rebased first (replay-shim risk lowest there); the proven protocol-client + replay shape was
+> then ported to the pytest adapter.
 >
 > Note on repos: this plan doc lives in the engine repo (`refactor/`, next to phases 0–4); the
-> **implementation lands in `antigen-typescript`**. Per architecture §5 the two foreign adapters
-> become their own repos with their own toolchains/CI — this is the first of them.
+> **implementations land in `antigen-typescript` and `antigen-python`**. Per architecture §5 the
+> foreign adapters become their own repos with their own toolchains/CI.
 
 ## Goal
 
@@ -115,10 +116,53 @@ exclusions are an engine concern (an unmatched endpoint simply plans nothing). L
   undisturbed.
 - TS strict type-check (`tsc -p tsconfig.json --noEmit`) green.
 
+## Python adapter (`antigen-python`)
+
+Same protocol, same "dumb glue" contract; the proven TS shape ported to pytest. Key differences,
+all stemming from pytest's **single-process** model (no Jest-style module-registry sandboxing):
+
+- **No on-disk session handoff.** The engine + session live on the pytest `config` object. The
+  plugin spawns the fat jar once in `pytest_configure`, opens one session, and ends it + kills the
+  engine in `pytest_unconfigure`. (Jest needed `engine-session.json` only because each test file
+  got a fresh module registry.) `pytest-xdist` is therefore unsupported — documented, not fixed.
+- **Replay shim = re-run the pytest item.** The plugin wraps `pytest_runtest_call` as a
+  hookwrapper: the real call (the `yield`) is the baseline run (real HTTP, captured); then
+  `FaultSimulator.simulate` re-runs `item.runtest()` once per planned run (`[control, ...runs]`),
+  with `requests.Session.request` monkeypatched to serve the engine's `responseBody` for
+  `targetIndex` and cached bodies otherwise — **no network on replay** (a real `requests.Response`
+  is constructed). The baseline outcome is what pytest reports; replay failures are swallowed into
+  verdicts. A failing baseline skips simulation (genuine failure).
+- **Engine RPC bypasses the shim.** The protocol client uses `http.client` (stdlib), not
+  `requests`, so the monkeypatch never intercepts engine calls.
+- **Files** (package `antigen`, project dir `antigen-pytest/`): `antigen/engine/{protocol,client,
+  process}.py`, `antigen/core/runner/{context,fault_simulator}.py`,
+  `antigen/core/interceptors/http_interceptor.py` (rewritten), `antigen/pytest_plugin.py`
+  (rewritten). Activation: `--antigen` flag or `ANTIGEN_ACTIVE=true`
+  (`--metatest` kept as a deprecated alias). Config dir `antigen/simulation/invariants/{users,
+  payments,orders}.yml`; `pytest.ini` anchors rootdir so `pytest --antigen` "just works".
+- **Removed (replaced by the engine):** the old `core/faults/*`, `core/reporter/*`, `config/*`,
+  `cli/*`, `utils/*`, and `core/runner/fault_runner.py` (local mutation/scoring/CLI) were deleted in
+  the rename to package `antigen`; the root `config.yml` is left as an orphan, off the active path.
+
+### Verification (this machine)
+
+- **Active** (`pytest --antigen`): 18 tests pass; session summary **faults 15, caught 12,
+  escaped 3, flaky 0**; clean process exit, **no leaked `java`** (after switching the Windows
+  teardown to `taskkill /PID <pid> /T /F` — `Popen.terminate()` is unreliable against the JVM).
+  Report has correct cross-test attribution — e.g. `user_valid_theme` caught by
+  `test_user_preferences_with_null_values`, `user_positive_id` by `test_get_user`/`test_get_user_details`,
+  nested fields caught by the *right* invariant (deep-copy holds) — and **0 infra-errors** (all
+  `caught_by[].error` are real `assert` failures). The 3 escapes are the intended `is_not_empty`
+  rules (`username`, `email`, payment `id`) against `is not None` assertions.
+- **Inactive** (`pytest`): 18 tests pass, engine not spawned — default path undisturbed.
+
 ## Follow-ups
 
 - True replay short-circuit (request-adapter, zero network) to match engine semantics exactly.
-- Distribution: npm package fetches the pinned engine binary on first run (esbuild/Playwright
-  model, architecture §3) — depends on the Phase 4 native binary CI matrix.
-- Phase 6: run the shared conformance subset in the TS adapter's CI.
-- Then port the proven client + replay shape to `antigen-python` (pytest plugin).
+  (Python already constructs a synthetic `requests.Response` with no network on replay; TS still
+  lets the local mock call happen.)
+- Distribution: npm package / pip package fetches the pinned engine binary on first run
+  (esbuild/Playwright model, architecture §3) — depends on the Phase 4 native binary CI matrix.
+- Phase 6: run the shared conformance subset in both adapters' CI.
+- pytest-xdist support for `antigen-python` (would need the HTTP + shared-session-file model the
+  Jest adapter already uses).
