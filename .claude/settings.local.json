@@ -54,7 +54,8 @@
       "Bash(where claude *)",
       "Read(//c/Users/M/**)",
       "Bash(git tag *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(grep -E '\\\\.\\(md|java|yaml|yml|gradle|ts|js|json\\)$')"
     ],
     "deny": [],
     "ask": []

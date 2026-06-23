@@ -1,0 +1,129 @@
+name: Trading - Order Lifecycle
+description: >
+  Business rules for order creation and lifecycle state transitions.
+  Covers status integrity, quantity/price constraints, and temporal ordering.
+
+invariants:
+  /api/v1/orders:
+    GET:
+      invariants:
+        # DEMO: all list invariants will not be caught - testListMyOrders only checks status 200 and array size
+        - name: all_orders_valid_status
+          field: $[*].status
+          in: [PENDING, FILLED, REJECTED, CANCELLED]
+
+        - name: all_orders_positive_quantity
+          field: $[*].quantity
+          greater_than: 0
+
+        - name: all_orders_have_symbol
+          field: $[*].symbol
+          is_not_empty: true
+
+        - name: all_orders_non_negative_price
+          field: $[*].price
+          greater_than_or_equal: 0
+
+    POST:
+      invariants:
+        - name: new_order_valid_status
+          field: status
+          in: [PENDING, FILLED, REJECTED]
+
+        - name: new_order_has_symbol
+          field: symbol
+          is_not_empty: true
+
+        - name: new_order_positive_quantity
+          field: quantity
+          greater_than: 0
+
+        - name: new_order_non_negative_price
+          field: price
+          greater_than_or_equal: 0
+
+        - name: new_order_non_negative_total
+          field: total_amount
+          greater_than_or_equal: 0
+
+        - name: filled_order_has_filled_at
+          if:
+            field: status
+            equals: FILLED
+          then:
+            field: filled_at
+            is_not_null: true
+
+        - name: non_rejected_order_no_reason
+          if:
+            field: status
+            not_equals: REJECTED
+          then:
+            field: rejection_reason
+            is_null: true
+
+        # DEMO: will not be caught - testCreateBuyOrder/testCreateSellOrder do not assert on account_id in response
+        - name: order_has_valid_account_id
+          field: account_id
+          greater_than: 0
+
+  /api/v1/orders/{id}:
+    GET:
+      invariants:
+        # DEMO: all GET /orders/{id} invariants will not be caught - testGetOrder is @Disabled
+        - name: filled_order_has_filled_at
+          if:
+            field: status
+            equals: FILLED
+          then:
+            field: filled_at
+            is_not_null: true
+
+        - name: pending_order_no_filled_at
+          if:
+            field: status
+            equals: PENDING
+          then:
+            field: filled_at
+            is_null: true
+
+        - name: rejected_order_has_reason
+          if:
+            field: status
+            equals: REJECTED
+          then:
+            field: rejection_reason
+            is_not_null: true
+
+        - name: non_rejected_order_no_reason
+          if:
+            field: status
+            not_equals: REJECTED
+          then:
+            field: rejection_reason
+            is_null: true
+
+        - name: valid_order_type
+          field: order_type
+          in: [BUY, SELL]
+
+        - name: positive_quantity
+          field: quantity
+          greater_than: 0
+
+        - name: non_negative_price
+          field: price
+          greater_than_or_equal: 0
+
+        - name: non_negative_total
+          field: total_amount
+          greater_than_or_equal: 0
+
+        - name: filled_at_after_created_at
+          if:
+            field: filled_at
+            is_not_null: true
+          then:
+            field: created_at
+            less_than_or_equal: $.filled_at
+

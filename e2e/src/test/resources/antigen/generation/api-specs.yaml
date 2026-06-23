@@ -1,0 +1,1107 @@
+openapi: 3.1.0
+info:
+  title: Order Execution Engine API
+  description: A Paper Trading / Order Execution Engine API with JWT Authentication
+  version: 1.0.0
+paths:
+  /api/v1/auth/register:
+    post:
+      tags:
+      - authentication
+      summary: Register
+      description: Register a new user
+      operationId: register_api_v1_auth_register_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/auth/login:
+    post:
+      tags:
+      - authentication
+      summary: Login
+      description: 'Login with username and password to get an access token.
+
+        Returns a JWT token to use in the Authorization header: ''Bearer <token>'''
+      operationId: login_api_v1_auth_login_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserLogin'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Token'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/auth/me:
+    get:
+      tags:
+      - authentication
+      summary: Get Current User Info
+      description: Get current authenticated user's information
+      operationId: get_current_user_info_api_v1_auth_me_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+      security:
+      - OAuth2PasswordBearer: []
+  /api/v1/stocks:
+    get:
+      tags:
+      - stocks
+      summary: Get All Stocks
+      description: List all available stocks with current prices
+      operationId: get_all_stocks_api_v1_stocks_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/StockPriceResponse'
+                type: array
+                title: Response Get All Stocks Api V1 Stocks Get
+  /api/v1/stocks/{symbol}:
+    get:
+      tags:
+      - stocks
+      summary: Get Stock Price
+      description: Get current price for a specific symbol
+      operationId: get_stock_price_api_v1_stocks__symbol__get
+      parameters:
+      - name: symbol
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Symbol
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockPriceResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    put:
+      tags:
+      - stocks
+      summary: Update Stock Price
+      description: Update stock price (for testing/demo purposes)
+      operationId: update_stock_price_api_v1_stocks__symbol__put
+      parameters:
+      - name: symbol
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Symbol
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockPriceUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockPriceResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/accounts:
+    get:
+      tags:
+      - accounts
+      summary: List User Accounts
+      description: Get all accounts for the current user
+      operationId: list_user_accounts_api_v1_accounts_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/AccountResponse'
+                type: array
+                title: Response List User Accounts Api V1 Accounts Get
+      security:
+      - OAuth2PasswordBearer: []
+    post:
+      tags:
+      - accounts
+      summary: Create Account
+      description: Create a new trading account (requires authentication)
+      operationId: create_account_api_v1_accounts_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountCreate'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - OAuth2PasswordBearer: []
+  /api/v1/accounts/{account_id}:
+    get:
+      tags:
+      - accounts
+      summary: Get Account
+      description: Get account details by ID (only owner can access)
+      operationId: get_account_api_v1_accounts__account_id__get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: account_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Account Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/accounts/{account_id}/deposit:
+    post:
+      tags:
+      - accounts
+      summary: Deposit Cash
+      description: Deposit cash into account (only owner can access)
+      operationId: deposit_cash_api_v1_accounts__account_id__deposit_post
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: account_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Account Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountDeposit'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/accounts/{account_id}/withdraw:
+    post:
+      tags:
+      - accounts
+      summary: Withdraw Cash
+      description: Withdraw cash from account (only owner can access)
+      operationId: withdraw_cash_api_v1_accounts__account_id__withdraw_post
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: account_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Account Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountWithdraw'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/accounts/{account_id}/performance:
+    get:
+      tags:
+      - accounts
+      summary: Get Account Performance
+      description: Get account performance summary (only owner can access)
+      operationId: get_account_performance_api_v1_accounts__account_id__performance_get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: account_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Account Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountPerformance'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/orders:
+    post:
+      tags:
+      - orders
+      summary: Create Order
+      description: Create and execute a new order (requires authentication, only for
+        own accounts)
+      operationId: create_order_api_v1_orders_post
+      security:
+      - OAuth2PasswordBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    get:
+      tags:
+      - orders
+      summary: Get Orders
+      description: List orders for current user's accounts
+      operationId: get_orders_api_v1_orders_get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: account_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Filter by account ID
+          title: Account Id
+        description: Filter by account ID
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Filter by status
+          title: Status
+        description: Filter by status
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          description: Maximum number of orders to return
+          default: 50
+          title: Limit
+        description: Maximum number of orders to return
+      - name: offset
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          description: Number of orders to skip
+          default: 0
+          title: Offset
+        description: Number of orders to skip
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrderResponse'
+                title: Response Get Orders Api V1 Orders Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/orders/{order_id}:
+    get:
+      tags:
+      - orders
+      summary: Get Order
+      description: Get specific order details (only if belongs to user's account)
+      operationId: get_order_api_v1_orders__order_id__get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: order_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Order Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/positions:
+    get:
+      tags:
+      - positions
+      summary: Get Positions
+      description: List positions for current user's accounts
+      operationId: get_positions_api_v1_positions_get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: account_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Filter by account ID
+          title: Account Id
+        description: Filter by account ID
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PositionResponse'
+                title: Response Get Positions Api V1 Positions Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/positions/{account_id}:
+    get:
+      tags:
+      - positions
+      summary: Get Account Positions
+      description: Get all positions for a specific account (only if user owns account)
+      operationId: get_account_positions_api_v1_positions__account_id__get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: account_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Account Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PositionResponse'
+                title: Response Get Account Positions Api V1 Positions  Account Id  Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/trades:
+    get:
+      tags:
+      - trades
+      summary: Get Trades
+      description: List executed trades for current user's accounts
+      operationId: get_trades_api_v1_trades_get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: account_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Filter by account ID
+          title: Account Id
+        description: Filter by account ID
+      - name: symbol
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Filter by symbol
+          title: Symbol
+        description: Filter by symbol
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          description: Maximum number of trades to return
+          default: 50
+          title: Limit
+        description: Maximum number of trades to return
+      - name: offset
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          description: Number of trades to skip
+          default: 0
+          title: Offset
+        description: Number of trades to skip
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TradeResponse'
+                title: Response Get Trades Api V1 Trades Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/trades/{account_id}:
+    get:
+      tags:
+      - trades
+      summary: Get Account Trades
+      description: Get all trades for a specific account (only if user owns account)
+      operationId: get_account_trades_api_v1_trades__account_id__get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: account_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Account Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TradeResponse'
+                title: Response Get Account Trades Api V1 Trades  Account Id  Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /health:
+    get:
+      summary: Health Check
+      description: Health check endpoint
+      operationId: health_check_health_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /:
+    get:
+      summary: Root
+      description: Root endpoint with API information
+      operationId: root__get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+components:
+  schemas:
+    AccountCreate:
+      properties:
+        holder_name:
+          type: string
+          maxLength: 100
+          minLength: 1
+          title: Holder Name
+        initial_cash:
+          anyOf:
+          - type: number
+            exclusiveMinimum: 0.0
+          - type: string
+            pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d{0,2}0*$
+          title: Initial Cash
+      type: object
+      required:
+      - holder_name
+      - initial_cash
+      title: AccountCreate
+    AccountDeposit:
+      properties:
+        amount:
+          anyOf:
+          - type: number
+            exclusiveMinimum: 0.0
+          - type: string
+            pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d{0,2}0*$
+          title: Amount
+      type: object
+      required:
+      - amount
+      title: AccountDeposit
+    AccountPerformance:
+      properties:
+        account_id:
+          type: integer
+          title: Account Id
+        cash_balance:
+          type: string
+          pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+          title: Cash Balance
+        total_position_value:
+          type: string
+          pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+          title: Total Position Value
+        total_value:
+          type: string
+          pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+          title: Total Value
+        total_realized_pnl:
+          type: string
+          pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+          title: Total Realized Pnl
+        total_unrealized_pnl:
+          type: string
+          pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+          title: Total Unrealized Pnl
+        positions_count:
+          type: integer
+          title: Positions Count
+        trades_count:
+          type: integer
+          title: Trades Count
+      type: object
+      required:
+      - account_id
+      - cash_balance
+      - total_position_value
+      - total_value
+      - total_realized_pnl
+      - total_unrealized_pnl
+      - positions_count
+      - trades_count
+      title: AccountPerformance
+    AccountResponse:
+      properties:
+        id:
+          type: integer
+          title: Id
+        account_number:
+          type: string
+          title: Account Number
+        holder_name:
+          type: string
+          title: Holder Name
+        cash_balance:
+          type: string
+          pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+          title: Cash Balance
+        total_value:
+          type: string
+          pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+          title: Total Value
+        status:
+          type: string
+          title: Status
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      type: object
+      required:
+      - id
+      - account_number
+      - holder_name
+      - cash_balance
+      - total_value
+      - status
+      - created_at
+      - updated_at
+      title: AccountResponse
+    AccountWithdraw:
+      properties:
+        amount:
+          anyOf:
+          - type: number
+            exclusiveMinimum: 0.0
+          - type: string
+            pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d{0,2}0*$
+          title: Amount
+      type: object
+      required:
+      - amount
+      title: AccountWithdraw
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    OrderCreate:
+      properties:
+        account_id:
+          type: integer
+          exclusiveMinimum: 0.0
+          title: Account Id
+        symbol:
+          type: string
+          maxLength: 10
+          minLength: 1
+          title: Symbol
+        order_type:
+          type: string
+          pattern: ^(BUY|SELL)$
+          title: Order Type
+        quantity:
+          type: integer
+          exclusiveMinimum: 0.0
+          title: Quantity
+      type: object
+      required:
+      - account_id
+      - symbol
+      - order_type
+      - quantity
+      title: OrderCreate
+    OrderResponse:
+      properties:
+        id:
+          type: integer
+          title: Id
+        account_id:
+          type: integer
+          title: Account Id
+        symbol:
+          type: string
+          title: Symbol
+        order_type:
+          type: string
+          title: Order Type
+        quantity:
+          type: integer
+          title: Quantity
+        price:
+          type: string
+          pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+          title: Price
+        status:
+          type: string
+          title: Status
+        rejection_reason:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Rejection Reason
+        total_amount:
+          type: string
+          pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+          title: Total Amount
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        filled_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Filled At
+      type: object
+      required:
+      - id
+      - account_id
+      - symbol
+      - order_type
+      - quantity
+      - price
+      - status
+      - total_amount
+      - created_at
+      title: OrderResponse
+    PositionResponse:
+      properties:
+        id:
+          type: integer
+          title: Id
+        account_id:
+          type: integer
+          title: Account Id
+        symbol:
+          type: string
+          title: Symbol
+        quantity:
+          type: integer
+          title: Quantity
+        average_cost:
+          type: string
+          pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+          title: Average Cost
+        current_value:
+          anyOf:
+          - type: string
+            pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+          - type: 'null'
+          title: Current Value
+        unrealized_pnl:
+          anyOf:
+          - type: string
+            pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+          - type: 'null'
+          title: Unrealized Pnl
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      type: object
+      required:
+      - id
+      - account_id
+      - symbol
+      - quantity
+      - average_cost
+      - created_at
+      - updated_at
+      title: PositionResponse
+    StockPriceResponse:
+      properties:
+        id:
+          type: integer
+          title: Id
+        symbol:
+          type: string
+          title: Symbol
+        current_price:
+          type: string
+          pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+          title: Current Price
+        last_updated:
+          type: string
+          format: date-time
+          title: Last Updated
+      type: object
+      required:
+      - id
+      - symbol
+      - current_price
+      - last_updated
+      title: StockPriceResponse
+    StockPriceUpdate:
+      properties:
+        current_price:
+          anyOf:
+          - type: number
+            exclusiveMinimum: 0.0
+          - type: string
+            pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d{0,2}0*$
+          title: Current Price
+      type: object
+      required:
+      - current_price
+      title: StockPriceUpdate
+    Token:
+      properties:
+        access_token:
+          type: string
+          title: Access Token
+        token_type:
+          type: string
+          title: Token Type
+      type: object
+      required:
+      - access_token
+      - token_type
+      title: Token
+    TradeResponse:
+      properties:
+        id:
+          type: integer
+          title: Id
+        order_id:
+          type: integer
+          title: Order Id
+        account_id:
+          type: integer
+          title: Account Id
+        symbol:
+          type: string
+          title: Symbol
+        trade_type:
+          type: string
+          title: Trade Type
+        quantity:
+          type: integer
+          title: Quantity
+        price:
+          type: string
+          pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+          title: Price
+        total_amount:
+          type: string
+          pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+          title: Total Amount
+        executed_at:
+          type: string
+          format: date-time
+          title: Executed At
+      type: object
+      required:
+      - id
+      - order_id
+      - account_id
+      - symbol
+      - trade_type
+      - quantity
+      - price
+      - total_amount
+      - executed_at
+      title: TradeResponse
+    UserCreate:
+      properties:
+        email:
+          type: string
+          format: email
+          title: Email
+        username:
+          type: string
+          maxLength: 50
+          minLength: 3
+          title: Username
+        password:
+          type: string
+          minLength: 2
+          title: Password
+          description: Password must be between 2 and 72 bytes
+        full_name:
+          anyOf:
+          - type: string
+            maxLength: 100
+          - type: 'null'
+          title: Full Name
+      type: object
+      required:
+      - email
+      - username
+      - password
+      title: UserCreate
+    UserLogin:
+      properties:
+        username:
+          type: string
+          title: Username
+        password:
+          type: string
+          title: Password
+      type: object
+      required:
+      - username
+      - password
+      title: UserLogin
+    UserResponse:
+      properties:
+        id:
+          type: integer
+          title: Id
+        email:
+          type: string
+          title: Email
+        username:
+          type: string
+          title: Username
+        full_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Full Name
+        is_active:
+          type: boolean
+          title: Is Active
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      type: object
+      required:
+      - id
+      - email
+      - username
+      - full_name
+      - is_active
+      - created_at
+      - updated_at
+      title: UserResponse
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+  securitySchemes:
+    OAuth2PasswordBearer:
+      type: oauth2
+      flows:
+        password:
+          scopes: {}
+          tokenUrl: /api/v1/auth/login
+

@@ -13,6 +13,10 @@ public class GlobalTestExecutionListener implements TestExecutionListener {
 
     private static boolean executed = false;
     private final boolean runWithAntigen = Boolean.parseBoolean(System.getProperty("runWithAntigen"));
+    // When true, emit only the JSON report (to the configured path) and skip the human-facing
+    // artifacts. Used by the AI generation loop so no fault-revealing files land in the agent's
+    // workspace — the agent must derive assertions from the spec, not a leaked report.
+    private final boolean jsonOnly = Boolean.parseBoolean(System.getProperty("antigen.report.json_only"));
 
     public GlobalTestExecutionListener() {
         System.out.println("[Antigen] GlobalTestExecutionListener initialized. runWithAntigen=" + runWithAntigen);
@@ -24,10 +28,16 @@ public class GlobalTestExecutionListener implements TestExecutionListener {
         if (!executed && runWithAntigen) {
             executed = true;
             System.out.println("[Antigen] All tests completed - Generating reports...");
-            new File(FaultSimulationReport.OUTPUT_DIR).mkdirs();
 
             FaultSimulationReport.getInstance().printConsoleSummary();
             FaultSimulationReport.getInstance().createJSONReport();
+
+            if (jsonOnly) {
+                System.out.println("[Antigen] json_only mode - skipping HTML, coverage and gap reports");
+                return;
+            }
+
+            new File(FaultSimulationReport.OUTPUT_DIR).mkdirs();
             Collector.saveCoverageReport();
             GapAnalyzer.generateGapReport();
 

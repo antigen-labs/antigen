@@ -73,6 +73,16 @@ public class Antigen implements Callable<Integer> {
                     return 1;
                 }
 
+                if (!looksLikeProjectRoot(project)) {
+                    System.err.println("Error: --project must be the project ROOT (the directory "
+                            + "containing build.gradle/build.gradle.kts/gradlew or pom.xml), not a "
+                            + "source directory like src/test/java.");
+                    System.err.println("  Given: " + project);
+                    System.err.println("  --output-dir (default src/test/java/generated) is resolved "
+                            + "relative to this root, so pointing at a source dir doubles the path.");
+                    return 1;
+                }
+
                 Path output = Paths.get(outputDir).isAbsolute()
                         ? Paths.get(outputDir).normalize()
                         : project.resolve(outputDir).normalize();
@@ -118,6 +128,20 @@ public class Antigen implements Callable<Integer> {
                 }
                 return 1;
             }
+        }
+
+        private static boolean looksLikeProjectRoot(Path dir) {
+            String[] markers = {
+                    "build.gradle", "build.gradle.kts",
+                    "settings.gradle", "settings.gradle.kts",
+                    "gradlew", "pom.xml"
+            };
+            for (String marker : markers) {
+                if (Files.exists(dir.resolve(marker))) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         private List<String> loadRequirementsFromFile(String filePath) throws Exception {

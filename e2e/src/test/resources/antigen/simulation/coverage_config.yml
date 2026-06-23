@@ -1,0 +1,16 @@
+coverage:
+  enabled: true
+
+  urls:
+    # - "http://localhost:8000"
+
+  exclude_endpoints:
+    # - "*/health"
+
+  include_request_body: true
+  include_response_body: true
+  aggregate_by_pattern: true
+
+  gap_analysis:
+    enabled: true
+    openapi_spec_path: "antigen/generation/api-specs.yaml"

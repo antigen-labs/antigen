@@ -104,18 +104,34 @@ public class GradleRunner {
 
         String gradleCommand = getGradleCommand(context.getProjectPath());
 
-        String reportPath = context.getProjectPath()
-                .resolve(io.antigen.core.simulation.FaultSimulationReport.OUTPUT_DIR)
-                .resolve("fault_simulation_report.json").toString();
+        // Write the report to a stable path OUTSIDE the agent's project workspace so the AI cannot
+        // read which faults were injected, but retain it (and log the path) so a developer can
+        // inspect it. Cleared before the run so a stale report can't be mistaken for a fresh one.
+        Path reportPath;
+        try {
+            Path reportDir = Path.of(System.getProperty("java.io.tmpdir"), "antigen");
+            Files.createDirectories(reportDir);
+            reportPath = reportDir.resolve("fault_simulation_report.json");
+            Files.deleteIfExists(reportPath);
+        } catch (IOException e) {
+            log.error("Failed to prepare report file", e);
+            return AntigenPhase.error("Could not prepare a file for the Antigen report: " + e.getMessage());
+        }
+        log.info("Antigen report (internal, hidden from the agent): {}", reportPath);
 
         ProcessExecutor.ProcessCommand command = ProcessExecutor.ProcessCommand.builder()
                 .command(
                         gradleCommand,
                         "test",
                         "--tests", toTestPattern(context),
+                        // Force re-execution: the plain test run (without Antigen) leaves the test
+                        // task up-to-date, and the -D properties below are not declared task inputs,
+                        // so without this Gradle skips the simulation run and no report is written.
+                        "--rerun-tasks",
                         "-DrunWithAntigen=true",
                         "-Dio.antigen.core.config.source=local",
                         "-Dantigen.report.path=" + reportPath,
+                        "-Dantigen.report.json_only=true",
                         "--console=plain",
                         "--no-daemon"
                 )
@@ -127,7 +143,7 @@ public class GradleRunner {
         ProcessExecutor.ProcessResult result = processExecutor.execute(command);
 
         try {
-            AntigenReport report = parseAntigenReport(context.getProjectPath());
+            AntigenReport report = parseAntigenReport(reportPath);
 
             if (report.getEscapedFaults().isEmpty()) {
                 log.info("Antigen passed - all faults caught");
@@ -147,21 +163,57 @@ public class GradleRunner {
             );
 
         } catch (IOException e) {
-            log.error("Failed to parse Antigen report", e);
-            return AntigenPhase.failed(
-                    List.of(new EscapedFault("unknown", "unknown", "unknown", "unknown")),
-                    0.0,
-                    1,
-                    0
-            );
+            log.error("Antigen simulation produced no usable report at {}", reportPath, e);
+            return AntigenPhase.error(
+                    "Antigen simulation produced no usable report (" + reportPath + " was missing, "
+                    + "empty, or unparseable). The fault-simulation test run did not write results -- "
+                    + "this is an environment/setup problem, not an assertion gap. Check that the target "
+                    + "project applies Antigen and forwards -DrunWithAntigen/-Dantigen.report.path to the "
+                    + "test JVM, that the simulation tests actually executed, and that the backend API was "
+                    + "reachable. Cause: " + e.getMessage());
         }
     }
 
-    private AntigenReport parseAntigenReport(Path projectPath) throws IOException {
-        Path reportPath = projectPath
-                .resolve(io.antigen.core.simulation.FaultSimulationReport.OUTPUT_DIR)
-                .resolve("fault_simulation_report.json");
+    /**
+     * Final proof-of-result pass, run once after the loop converges. Re-runs the simulation WITHOUT
+     * {@code json_only} so the engine writes the full human-readable artifact set (HTML, JSON,
+     * coverage, gap) into the project's {@code build/antigen}. Safe to expose here because the loop
+     * has terminated -- the agent is no longer generating, so this cannot leak faults back into it.
+     * Returns the HTML report path, or {@code null} if the pass could not be run.
+     */
+    public Path generateFullReport(GenerationContext context) {
+        log.info("Generating final Antigen report (HTML + JSON) as proof of result...");
+        String gradleCommand = getGradleCommand(context.getProjectPath());
 
+        ProcessExecutor.ProcessCommand command = ProcessExecutor.ProcessCommand.builder()
+                .command(
+                        gradleCommand,
+                        "test",
+                        "--tests", toTestPattern(context),
+                        "--rerun-tasks",
+                        "-DrunWithAntigen=true",
+                        "-Dio.antigen.core.config.source=local",
+                        "--console=plain",
+                        "--no-daemon"
+                )
+                .workingDirectory(context.getProjectPath())
+                .timeout(config.getAntigenTimeout())
+                .verbose(config.isVerbose())
+                .build();
+
+        try {
+            processExecutor.execute(command);
+            Path html = context.getProjectPath()
+                    .resolve(io.antigen.core.simulation.FaultSimulationReport.OUTPUT_DIR)
+                    .resolve("antigen_report.html");
+            return Files.exists(html) ? html : null;
+        } catch (Exception e) {
+            log.warn("Failed to generate final Antigen report: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private AntigenReport parseAntigenReport(Path reportPath) throws IOException {
         if (!Files.exists(reportPath)) {
             throw new IOException("Antigen report not found at: " + reportPath);
         }

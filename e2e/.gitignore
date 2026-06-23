@@ -1,0 +1,27 @@
+# Ignore build output directories
+/build/
+/out/
+
+# Ignore IntelliJ IDEA project files
+/.idea/
+/*.iml
+
+# Ignore Gradle caches and logs
+/.gradle/
+/logs/
+*.log
+
+# Ignore compiled class files
+*.class
+
+# Ignore generated JARs, WARs, or archives
+*.war
+*.ear
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
+
+.env
+gradle.properties
+*antigen.properties

@@ -92,6 +92,13 @@ public class Orchestrator {
 
             System.out.println("State 4: Running tests with Antigen fault injection...");
             AntigenPhase antigenPhase = gradleRunner.runAntigen(context);
+
+            if (antigenPhase.isError()) {
+                System.out.println("Result: ERROR");
+                System.out.println("Antigen simulation could not run: " + antigenPhase.getErrorMessage());
+                return GenerationResult.failure(attempt, antigenPhase.getErrorMessage());
+            }
+
             System.out.println("Result: " + (antigenPhase.isSuccess() ? "SUCCESS" : "FAILED"));
             System.out.printf("Fault Detection Rate: %.1f%%%n", antigenPhase.getFaultDetectionRate() * 100);
 
@@ -110,6 +117,12 @@ public class Orchestrator {
 
             System.out.println("=== SUCCESS ===");
             System.out.printf("Tests generated and validated in %d attempts%n", attempt);
+
+            Path htmlReport = gradleRunner.generateFullReport(context);
+            if (htmlReport != null) {
+                System.out.println("Antigen report (proof): " + htmlReport);
+            }
+
             return GenerationResult.success(attempt, genPhase.getGeneratedFiles());
         }
 

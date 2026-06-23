@@ -16,24 +16,50 @@ public class PromptBuilder {
      * tests must catch injected faults, not just pass.
      */
     private static final String SYSTEM_PROMPT = """
-            You are generating API tests that will be validated by Antigen fault simulation.
+            You are generating API integration tests for the API described by the specification below.
 
-            Goal: produce tests that CATCH injected faults — not tests that merely pass.
-            Antigen mutates API responses (null fields, missing fields, semantic violations) and
-            re-runs each test. A test that passes despite a mutation is a quality gap.
+            OBJECTIVE
+            Encode the API's contract as assertions. A good test issues a valid request, confirms the
+            documented success status, then asserts the full shape and content of the response body.
+            These tests are graded by Antigen fault simulation: it corrupts response fields to invalid
+            values and re-runs each test, so a test that still passes after a field is corrupted has an
+            assertion gap. Complete, faithful assertions catch this automatically. Do NOT try to guess
+            what gets corrupted -- assert the contract the spec defines and the faults fall out.
 
             API SPECIFICATION: {SPEC_PATH}
-            Read this file first using the Read tool. Do not assume its contents.
+            Read this file first with the Read tool. Do not assume its contents -- derive every
+            endpoint, field, type, and constraint from it.
 
-            Output: {OUTPUT_DIR}
-            - Valid Java source files only — no markdown, no code blocks, no explanations
-            - Each file must compile standalone: correct package declaration and all imports
-            - Organise by resource into separate test classes
+            OUTPUT: {OUTPUT_DIR}
+            - Java source files only. No markdown, no code fences, no prose, no explanations.
+            - Each file must compile standalone: correct package declaration (matching the output
+              directory) and all imports.
+            - One test class per resource / endpoint group.
 
-            Quality bar enforced by Antigen fault simulation:
-            - Assert every field in every response, not just the status code
-            - Include null checks, type checks, and value constraints
-            - Tests that only assert statusCode(200) will fail simulation
+            MAKE REQUESTS SUCCEED FIRST
+            - Supply the auth, headers, and path/query parameters the spec requires.
+            - Build request bodies that satisfy the spec, and create any prerequisite state the
+              endpoint depends on (e.g. create a resource before fetching it).
+            - A request must reach its documented success response before its body assertions mean
+              anything. If an endpoint cannot be made to return success, skip it rather than asserting
+              against an error body.
+
+            ASSERTION CHECKLIST -- apply to every response:
+            - Assert the HTTP status matches the documented success code.
+            - For every field in the response schema: assert it is present, assert it is non-null
+              (unless the spec marks it nullable), and assert its JSON type.
+            - Assert the value constraints the spec declares: enum membership, numeric min/max,
+              string format and non-emptiness, required patterns.
+            - For arrays: assert the array is present and, where the spec implies content, non-empty,
+              and apply the checks above to each element.
+            - Recurse into nested objects -- assert their fields too, not only the top level.
+            - Asserting only the status code is insufficient and will fail simulation.
+
+            DERIVE FROM THE SPEC ONLY
+            Base every assertion on the specification. Do not look for, open, or read any Antigen
+            report, fault simulation output, or files under build/. The injected faults are
+            intentionally not part of your input, so your assertions encode the real contract rather
+            than a leaked list of mutations.
 
             {USER_PROMPT}
             {FEEDBACK}
@@ -43,12 +69,12 @@ public class PromptBuilder {
 
     public String buildPrompt(GenerationContext context) throws IOException {
         Path projectPath = context.getProjectPath();
-        String specRelative = projectPath.relativize(context.getSpecPath()).toString().replace('\\', '/');
+        String specPathStr = pathForPrompt(projectPath, context.getSpecPath());
         String outputRelative = projectPath.relativize(context.getOutputDir()).toString().replace('\\', '/');
         String userPrompt = loadUserPrompt(projectPath);
 
         String prompt = SYSTEM_PROMPT
-                .replace("{SPEC_PATH}", specRelative)
+                .replace("{SPEC_PATH}", specPathStr)
                 .replace("{OUTPUT_DIR}", outputRelative)
                 .replace("{USER_PROMPT}", userPrompt.isBlank() ? "" : "\n" + userPrompt)
                 .replace("{FEEDBACK}", "");
@@ -68,9 +94,22 @@ public class PromptBuilder {
 
         return "The previous test generation attempt failed. Fix the issues below.\n\n"
                 + "Read the existing test files in " + outputRelative + "/, fix the reported issues, "
-                + "and write the corrected files back. Fix only what is reported — do not rewrite tests that are already correct.\n\n"
+                + "and write the corrected files back. Fix only what is reported - do not rewrite tests that are already correct.\n\n"
                 + "ISSUES:\n"
                 + context.getLatestFeedback().getFeedback().strip() + "\n";
+    }
+
+    /**
+     * Path to show the agent for a file it must read. The agent runs with the project as its
+     * working directory, so a path inside the project is given relative (clean, sandbox-friendly);
+     * a file outside the project tree is given absolute rather than as a fragile {@code ../../..}
+     * climb. Forward slashes either way so it reads the same on Windows.
+     */
+    private String pathForPrompt(Path projectPath, Path target) {
+        Path absoluteTarget = target.toAbsolutePath().normalize();
+        Path relative = projectPath.toAbsolutePath().normalize().relativize(absoluteTarget);
+        Path chosen = relative.startsWith("..") ? absoluteTarget : relative;
+        return chosen.toString().replace('\\', '/');
     }
 
     private String loadUserPrompt(Path projectPath) {
